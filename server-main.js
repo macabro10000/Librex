@@ -6,7 +6,6 @@ app.use(express.json({ limit: '50mb' }));
 
 const PORT = process.env.PORT || 3000;
 
-// URLs de conexión hacia los servidores auxiliares
 const USER_SERVICE_URL = process.env.USER_URL || 'http://localhost:3001';
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'http://localhost:3002';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'http://localhost:3003';
@@ -44,7 +43,6 @@ app.get('/', (req, res) => {
                 </div>
                 
                 <div class="menu-zones">
-                    <!-- Conexión al servidor de pasajeros -->
                     <a href="${USER_SERVICE_URL}" class="zone-card">
                         <div class="zone-icon">👤</div>
                         <div class="zone-info">
@@ -53,7 +51,6 @@ app.get('/', (req, res) => {
                         </div>
                     </a>
 
-                    <!-- Conexión al servidor de conductores -->
                     <a href="${DRIVER_SERVICE_URL}" class="zone-card" style="border-color: #166534;">
                         <div class="zone-icon" style="background: #14532d;">🚗</div>
                         <div class="zone-info">
@@ -62,7 +59,6 @@ app.get('/', (req, res) => {
                         </div>
                     </a>
 
-                    <!-- Conexión al servidor de administración -->
                     <a href="${ADMIN_SERVICE_URL}/admin?key=librex2026" class="zone-card" style="border-color: #1e3a8a;">
                         <div class="zone-icon" style="background: #1e40af;">🔐</div>
                         <div class="zone-info">
@@ -80,5 +76,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`[MAIN] Servidor principal activo en puerto ${PORT}`);
+    console.log(`[SERVER-MAIN] Servidor principal activo en puerto ${PORT}`);
 });
