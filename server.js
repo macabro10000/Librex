@@ -1,5 +1,5 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
+const qrcode = require('qrcode');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -8,34 +8,64 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static('public'));
+let latestQR = '';
+let connectionStatus = 'Desconectado';
+
+// Ruta web para ver el QR directamente en la página
+app.get('/', (req, res) => {
+    res.send(`
+        <html>
+            <head>
+                <title>Librex - Vinculación WhatsApp</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f9; padding: 20px; }
+                    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: inline-block; margin-top: 20px; }
+                    h2 { color: #333; }
+                    p { font-size: 18px; color: #666; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h2>Vinculación de WhatsApp - Librex</h2>
+                    <p>Estado: <b>${connectionStatus}</b></p>
+                    ${latestQR ? `<img src="${latestQR}" alt="Código QR de WhatsApp" style="max-width:300px;"/>` : `<p>Cargando QR o ya estás conectado. Actualiza la página si tardas.</p>`}
+                </div>
+            </body>
+        </html>
+    `);
+});
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
     
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: false // Lo manejamos manualmente con qrcode-terminal
+        printQRInTerminal: false
     });
 
-    sock.льнай ? sock.ev.on('creds.update', saveCreds) : null;
+    sock.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
         
         if (qr) {
-            // Esto imprime el código QR perfectamente en los logs de Render
-            console.log('Escanea este código QR con tu WhatsApp:');
-            qrcode.generate(qr, { small: true });
+            connectionStatus = 'Esperando escaneo de QR';
+            // Convierte el código QR en una imagen bonita para la web
+            latestQR = await qrcode.toDataURL(qr);
+            console.log('Nuevo QR generado. Visita la web para escanearlo.');
         }
 
         if (connection === 'close') {
+            connectionStatus = 'Conexión cerrada';
+            latestQR = '';
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Conexión cerrada. Reconectando...', shouldReconnect);
             if (shouldReconnect) {
                 connectToWhatsApp();
             }
         } else if (connection === 'open') {
+            connectionStatus = '¡Conectado con éxito a WhatsApp!';
+            latestQR = '';
             console.log('¡WhatsApp conectado con éxito!');
         }
     });
