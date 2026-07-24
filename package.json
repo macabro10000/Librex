@@ -1,7 +1,7 @@
 {
-  "name": "librex-microservices",
+  "name": "librex-distributed-system",
   "version": "1.0.0",
-  "description": "Sistema Multiplataforma Librex por Microservicios",
+  "description": "Sistema Librex multi-servidor independiente",
   "main": "server-master.js",
   "scripts": {
     "start": "node server-master.js"
