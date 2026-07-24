@@ -1,7 +1,7 @@
 {
-  "name": "librex",
+  "name": "librex-realtime-backend",
   "version": "1.0.0",
-  "description": "Servidor de transporte en tiempo real con WebSockets y WhatsApp.",
+  "description": "Backend profesional para plataforma de transporte en tiempo real con WebSockets y WhatsApp.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,7 +9,7 @@
   "dependencies": {
     "@whiskeysockets/baileys": "latest",
     "express": "latest",
-    "qrcode-terminal": "latest",
+    "qrcode": "latest",
     "socket.io": "latest"
   }
 }
