@@ -1,15 +1,15 @@
 {
-  "name": "alfa-omega-transporte",
+  "name": "librex",
   "version": "1.0.0",
-  "description": "Servidor de transporte en tiempo real y WhatsApp",
+  "description": "Servidor de transporte en tiempo real con WebSockets y WhatsApp.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.5",
-    "express": "^4.19.2",
-    "pino": "^9.0.0",
-    "socket.io": "^4.7.5"
+    "@whiskeysockets/baileys": "latest",
+    "express": "latest",
+    "qrcode-terminal": "latest",
+    "socket.io": "latest"
   }
 }
