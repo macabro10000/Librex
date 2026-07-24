@@ -1,12 +1,13 @@
 {
   "name": "librex-realtime-backend",
   "version": "1.0.0",
-  "description": "Backend para transporte en tiempo real",
+  "description": "Backend profesional para transporte y pedidos por WhatsApp",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "@whiskeysockets/baileys": "latest",
     "express": "latest",
     "socket.io": "latest"
   }
