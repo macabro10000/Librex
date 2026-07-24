@@ -1,8 +1,11 @@
 {
-  "name": "librex-microservers",
+  "name": "librex-microservices",
   "version": "1.0.0",
-  "description": "Arquitectura de microservidores para Librex",
-  "main": "server-admin.js",
+  "description": "Sistema Multiplataforma Librex por Microservicios",
+  "main": "server-master.js",
+  "scripts": {
+    "start": "node server-master.js"
+  },
   "dependencies": {
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1"
