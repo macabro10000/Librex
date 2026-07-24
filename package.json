@@ -1,7 +1,7 @@
 {
   "name": "librex-main",
   "version": "1.0.0",
-  "description": "Servidor principal Librex App",
+  "description": "Servidor principal Librex con Autenticacion Google",
   "main": "server-main.js",
   "scripts": {
     "start": "node server-main.js"
