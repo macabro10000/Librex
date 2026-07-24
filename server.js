@@ -1,17 +1,16 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const readline = require('readline');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
-let connectionStatus = 'Iniciando sistema...';
-let pairingCodeDisplay = '';
+// Memoria de la flota en tiempo real
+const activeDrivers = new Map();
+const activeRides = [];
 
-// Interfaz web profesional para ver el estado y el código de vinculación
+// Panel de control web profesional para la plataforma Librex
 app.get('/', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -19,78 +18,74 @@ app.get('/', (req, res) => {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Librex - Fleet Gateway</title>
-            <meta http-equiv="refresh" content="6">
+            <title>Librex - Fleet Control Center</title>
             <style>
-                body { font-family: sans-serif; background: #0f172a; color: #f8fafc; text-align: center; padding: 30px; margin: 0; }
-                .card { background: #1e293b; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: inline-block; max-width: 400px; width: 100%; border: 1px solid #334155; }
-                h2 { color: #38bdf8; margin-top: 0; }
-                p { font-size: 15px; color: #94a3b8; }
-                .status { font-weight: bold; color: #facc15; }
-                .code-box { background: #0f172a; color: #38bdf8; font-size: 28px; font-weight: bold; letter-spacing: 4px; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px dashed #38bdf8; }
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; margin: 0; }
+                .container { max-width: 800px; margin: 0 auto; }
+                .card { background: #1e293b; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); margin-bottom: 20px; border: 1px solid #334155; }
+                h1 { color: #38bdf8; font-size: 24px; margin-top: 0; }
+                h2 { color: #facc15; font-size: 18px; }
+                .status-badge { background: #22c55e; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+                ul { padding-left: 20px; color: #94a3b8; }
+                li { margin-bottom: 8px; }
             </style>
         </head>
         <body>
-            <div class="card">
-                <h2>Librex Fleet Gateway</h2>
-                <p>Estado: <span class="status">${connectionStatus}</span></p>
-                ${pairingCodeDisplay ? `
-                    <p>Tu código de vinculación:</p>
-                    <div class="code-box">${pairingCodeDisplay}</div>
-                    <p style="font-size:12px; margin-top:12px;">Ingresa este código en tu WhatsApp > Dispositivos vinculados > Vincular con número de teléfono.</p>
-                ` : `<p>Configurando enlace seguro, actualizando...</p>`}
+            <div class="container">
+                <div class="card">
+                    <h1>Librex Fleet Gateway <span class="status-badge">ONLINE</span></h1>
+                    <p>Servidor central de transporte en tiempo real operando correctamente.</p>
+                    <p><b>Estado del Sistema:</b> WebSockets activos y listos para recibir conductores y pasajeros.</p>
+                </div>
+                <div class="card">
+                    <h2>Panel de Operaciones en Vivo</h2>
+                    <p>Conductores conectados en este momento: <b id="driver-count">0</b></p>
+                    <p>Solicitudes de viajes activas: <b id="ride-count">0</b></p>
+                </div>
             </div>
+            <script src="/socket.io/socket.io.js"></script>
+            <script>
+                const socket = io();
+                socket.on('map:broadcast_drivers', (drivers) => {
+                    document.getElementById('driver-count').innerText = drivers.length;
+                });
+            </script>
         </body>
         </html>
     `);
 });
 
-async function connectToWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
-    
-    const sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: false
+// GESTIÓN DE WEBSOCKETS PARA LA RED DE CARROS Y CLIENTES
+io.on('connection', (socket) => {
+    console.log(`[SOCKET] Conexión establecida con la app: ${socket.id}`);
+
+    // El conductor actualiza su posición GPS
+    socket.on('driver:update_location', (data) => {
+        const { driverId, lat, lng, status } = data;
+        activeDrivers.set(driverId, { socketId: socket.id, lat, lng, status, time: Date.now() });
+        io.emit('map:broadcast_drivers', Array.from(activeDrivers.entries()));
     });
 
-    sock.ev.on('creds.update', saveCreds);
+    // El cliente solicita un servicio de transporte
+    socket.on('client:request_ride', (rideData) => {
+        activeRides.push(rideData);
+        console.log('[RIDE] Nueva solicitud de viaje:', rideData);
+        io.emit('driver:new_ride_available', rideData);
+    });
 
-    // Si no está registrado, pedimos el código por consola (puedes poner tu número aquí o ver los logs en Render)
-    if (!sock.authState.creds.registered) {
-        // AQUÍ PUEDES PONER TU NÚMERO CON CÓDIGO DE PAÍS (Ej: 573001234567) si prefieres hardcodearlo temporalmente, 
-        // o usar el método automático por logs de Render.
-        const phoneNumber = "573000000000"; // Reemplázalo con tu número real si deseas, o déjalo para generarlo en logs.
-        
-        setTimeout(async () => {
-            try {
-                // Forzar código de emparejamiento si deseas
-                console.log("[PAIRING] Solicitando código de emparejamiento...");
-            } catch (err) {
-                console.log("[PAIRING ERROR]", err);
+    socket.on('disconnect', () => {
+        for (let [driverId, info] of activeDrivers.entries()) {
+            if (info.socketId === socket.id) {
+                activeDrivers.delete(driverId);
+                break;
             }
-        }, 5000);
-    }
-
-    sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        
-        if (connection === 'close') {
-            connectionStatus = 'Conexión cerrada, reconectando...';
-            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (shouldReconnect) {
-                setTimeout(connectToWhatsApp, 3000);
-            }
-        } else if (connection === 'open') {
-            connectionStatus = '¡Conectado y Operativo con WhatsApp!';
-            pairingCodeDisplay = 'CONECTADO';
-            console.log('[WHATSAPP] ¡Conexión establecida con éxito!');
         }
+        io.emit('map:broadcast_drivers', Array.from(activeDrivers.entries()));
+        console.log(`[SOCKET] Dispositivo desconectado: ${socket.id}`);
     });
-}
-
-connectToWhatsApp();
+});
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`[SERVER] Servidor corriendo en puerto ${PORT}`);
+    console.log(`[SERVER] Servidor Librex corriendo en puerto ${PORT}`);
 });
