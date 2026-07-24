@@ -1,0 +1,12 @@
+{
+  "name": "librex-main",
+  "version": "1.0.0",
+  "description": "Servidor principal Librex App",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
