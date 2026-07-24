@@ -1,28 +1,12 @@
 {
-  "name": "librex-ride-platform",
-  "version": "2.0.0",
-  "description": "Plataforma distribuida de movilidad Librex para clientes, conductores y administración",
-  "main": "server-main.js",
+  "name": "librex-main",
+  "version": "1.0.0",
+  "description": "Servidor principal Librex App",
+  "main": "main.js",
   "scripts": {
-    "start:main": "node server-main.js",
-    "start:user": "node server-user.js",
-    "start:driver": "node server-driver.js",
-    "start:admin": "node server-admin.js",
-    "dev:all": "concurrently \"npm run start:main\" \"npm run start:user\" \"npm run start:driver\" \"npm run start:admin\""
+    "start": "node main.js"
   },
-  "keywords": [
-    "librex",
-    "movilidad",
-    "ride-sharing",
-    "microservicios"
-  ],
-  "author": "Nikolay & Michael Johan",
-  "license": "MIT",
   "dependencies": {
-    "express": "^4.19.2",
-    "multer": "^1.4.5-lts.1"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.2"
+    "express": "^4.19.2"
   }
 }
