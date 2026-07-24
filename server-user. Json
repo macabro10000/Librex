@@ -1,0 +1,13 @@
+{
+  "name": "server-user",
+  "version": "1.0.0",
+  "description": "Auxiliar de pasajeros Librex",
+  "main": "server-user.js",
+  "scripts": {
+    "start": "node server-user.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}
