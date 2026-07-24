@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
 
 const app = express();
 const server = http.createServer(app);
@@ -99,7 +100,6 @@ app.get('/', (req, res) => {
     `);
 });
 
-const multer = require('multer');
 const upload = multer({ limits: { fileSize: 5 * 1024 * 1024 } });
 
 app.post('/register-driver', upload.fields([{ name: 'cedulaFront', maxCount: 1 }, { name: 'cedulaBack', maxCount: 1 }]), (req, res) => {
@@ -145,7 +145,7 @@ app.post('/register-driver', upload.fields([{ name: 'cedulaFront', maxCount: 1 }
     `);
 });
 
-// 2. PANEL DE ADMINISTRACIÓN (Con control total: Modificar, Congelar, Borrar y WhatsApp)
+// 2. PANEL DE ADMINISTRACIÓN
 app.get('/admin', (req, res) => {
     if (req.query.key !== ADMIN_PASSWORD) {
         return res.send('<h2 style="font-family:sans-serif; background:#0f172a; color:#ef4444; padding:50px; text-align:center;">Acceso Denegado</h2>');
@@ -211,7 +211,6 @@ app.get('/admin', (req, res) => {
                     </div>
                 </div>
 
-                <!-- CONTROLES FINANCIEROS Y DE ESTADO -->
                 <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
                     <form action="/admin/finance/adjust" method="POST" style="display:flex; gap:5px;">
                         <input type="hidden" name="phone" value="${phone}">
@@ -233,7 +232,6 @@ app.get('/admin', (req, res) => {
                         </form>
                     </div>
 
-                    <!-- FORMULARIO PARA MODIFICAR DATOS -->
                     <details style="background:#1e293b; padding:8px; border-radius:6px; border:1px solid #334155; margin-top:5px;">
                         <summary style="font-size:12px; color:#38bdf8; cursor:pointer; font-weight:bold;">✏️ Modificar Datos del Conductor</summary>
                         <form action="/admin/update" method="POST" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
@@ -277,8 +275,6 @@ app.get('/admin', (req, res) => {
         </html>
     `);
 });
-
-// --- ACCIONES DE ADMINISTRACIÓN TOTAL ---
 
 app.post('/admin/approve', (req, res) => {
     const { phone } = req.body;
