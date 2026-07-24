@@ -1,80 +1,53 @@
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const qrcode = require('qrcode-terminal');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const pino = require('pino');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: { origin: "*" }
-});
+const io = new Server(server);
 
-const PORT = process.env.PORT || 3000;
+app.use(express.static('public'));
 
-const conductoresActivos = new Map();
-
-async function iniciarWhatsAppRealTime() {
-    const { state, saveCreds } = await useMultiFileAuthState('sesion_wa_rt');
-
+async function connectToWhatsApp() {
+    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+    
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: true,
-        logger: pino({ level: 'silent' })
+        printQRInTerminal: false // Lo manejamos manualmente con qrcode-terminal
     });
 
-    sock.ev.on('creds.update', saveCreds);
+    sock.льнай ? sock.ev.on('creds.update', saveCreds) : null;
 
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, lastDisconnect, qr } = update;
+        
+        if (qr) {
+            // Esto imprime el código QR perfectamente en los logs de Render
+            console.log('Escanea este código QR con tu WhatsApp:');
+            qrcode.generate(qr, { small: true });
+        }
+
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (shouldReconnect) iniciarWhatsAppRealTime();
+            console.log('Conexión cerrada. Reconectando...', shouldReconnect);
+            if (shouldReconnect) {
+                connectToWhatsApp();
+            }
         } else if (connection === 'open') {
-            console.log('--- SERVIDOR WHATSAPP EN TIEMPO REAL CONECTADO ---');
+            console.log('¡WhatsApp conectado con éxito!');
         }
     });
 
-    sock.ev.on('messages.upsert', async ({ messages }) => {
-        const m = messages[0];
-        if (!m.message || m.key.fromMe) return;
-
-        const remitente = m.key.remoteJid;
-        const ubicacion = m.message.locationMessage;
-
-        if (ubicacion) {
-            const lat = ubicacion.degreesLatitude;
-            const lng = ubicacion.degreesLongitude;
-
-            console.log(`[GPS EN TIEMPO REAL] Ubicación recibida: ${lat}, ${lng}`);
-            io.emit('nuevo_pasajero', { remitente, lat, lng });
-
-            await sock.sendMessage(remitente, { 
-                text: '📍 Ubicación procesada en tiempo real. Conectando con el mapa...' 
-            });
-        }
+    sock.ev.on('messages.upsert', async m => {
+        console.log('Nuevo mensaje recibido:', JSON.stringify(m, undefined, 2));
     });
 }
 
-io.on('connection', (socket) => {
-    console.log(`[CLIENTE CONECTADO AL MAPA]: ${socket.id}`);
+connectToWhatsApp();
 
-    socket.on('actualizar_posicion_conductor', (data) => {
-        const { idConductor, lat, lng } = data;
-        conductoresActivos.set(idConductor, { lat, lng, ultimoPulso: Date.now() });
-        io.emit('mover_conductor', { idConductor, lat, lng });
-    });
-
-    socket.on('disconnect', () => {
-        console.log(`[CLIENTE DESCONECTADO]: ${socket.id}`);
-    });
-});
-
-app.get('/', (req, res) => {
-    res.send('Servidor Alfa Omega de Mapas Propios y WhatsApp Operativo.');
-});
-
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Servidor maestro corriendo en el puerto ${PORT}`);
-    iniciarWhatsAppRealTime();
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
 });
