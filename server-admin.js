@@ -33,7 +33,22 @@ function saveDB(dbData) {
     fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2));
 }
 
-// Interfaz Gráfica Maestra: Menú interactivo independiente con pestañas, buscador en tiempo real y persistencia blindada
+// Función auxiliar para eliminar recursivamente la carpeta de archivos multimedia de un usuario
+function deleteFolderRecursive(directoryPath) {
+    if (fs.existsSync(directoryPath)) {
+        fs.readdirSync(directoryPath).forEach((file) => {
+            const curPath = path.join(directoryPath, file);
+            if (fs.lstatSync(curPath).isDirectory()) {
+                deleteFolderRecursive(curPath);
+            } else {
+                fs.unlinkSync(curPath);
+            }
+        });
+        fs.rmdirSync(directoryPath);
+    }
+}
+
+// Interfaz Gráfica Maestra: Menú interactivo independiente con pestañas, buscador y control total de borrado
 app.get('/admin', (req, res) => {
     const { key, email } = req.query;
     if (key !== 'librex2026') {
@@ -51,7 +66,7 @@ app.get('/admin', (req, res) => {
     const drivers = Object.values(db.drivers || {});
     const clients = Object.values(db.clients || {});
 
-    // Generador de tarjetas dinámicas para Clientes
+    // Generador de tarjetas dinámicas para Clientes con Botón de Borrado Total
     let clientsHtml = clients.map(c => `
         <div class="card" data-search="${(c.fullName + ' ' + c.phone).toLowerCase()}">
             <div class="user-info">
@@ -65,14 +80,17 @@ app.get('/admin', (req, res) => {
                     <a href="${c.docBackUrl || '#'}" target="_blank"><img src="${c.docBackUrl || ''}" alt="Cédula Dorso"><span>Dorso</span></a>
                 </div>
             </div>
-            <div class="actions">
-                <button class="btn-approve" onclick="updateStatus('${c.phone}', 'client', 'active')">Aprobar ✅</button>
-                <button class="btn-reject" onclick="updateStatus('${c.phone}', 'client', 'rejected')">Rechazar ❌</button>
+            <div class="actions-group">
+                <div class="actions">
+                    <button class="btn-approve" onclick="updateStatus('${c.phone}', 'client', 'active')">Aprobar ✅</button>
+                    <button class="btn-reject" onclick="updateStatus('${c.phone}', 'client', 'rejected')">Rechazar ❌</button>
+                </div>
+                <button class="btn-delete" onclick="deleteUser('${c.phone}', 'client', '${c.fullName || c.phone}')">🗑️ Eliminar Perfil por Completo</button>
             </div>
         </div>
     `).join('') || '<p class="empty">No hay clientes registrados en la base de datos maestra.</p>';
 
-    // Generador de tarjetas dinámicas para Conductores
+    // Generador de tarjetas dinámicas para Conductores con Botón de Borrado Total
     let driversHtml = drivers.map(d => `
         <div class="card" data-search="${(d.fullName + ' ' + d.phone).toLowerCase()}">
             <div class="user-info">
@@ -86,9 +104,12 @@ app.get('/admin', (req, res) => {
                     <a href="${d.docBackUrl || '#'}" target="_blank"><img src="${d.docBackUrl || ''}" alt="Vehículo"><span>Vehículo</span></a>
                 </div>
             </div>
-            <div class="actions">
-                <button class="btn-approve" onclick="updateStatus('${d.phone}', 'driver', 'active')">Aprobar ✅</button>
-                <button class="btn-reject" onclick="updateStatus('${d.phone}', 'driver', 'rejected')">Rechazar ❌</button>
+            <div class="actions-group">
+                <div class="actions">
+                    <button class="btn-approve" onclick="updateStatus('${d.phone}', 'driver', 'active')">Aprobar ✅</button>
+                    <button class="btn-reject" onclick="updateStatus('${d.phone}', 'driver', 'rejected')">Rechazar ❌</button>
+                </div>
+                <button class="btn-delete" onclick="deleteUser('${d.phone}', 'driver', '${d.fullName || d.phone}')">🗑️ Eliminar Perfil por Completo</button>
             </div>
         </div>
     `).join('') || '<p class="empty">No hay conductores registrados en la base de datos maestra.</p>';
@@ -107,12 +128,10 @@ app.get('/admin', (req, res) => {
                 h1 { color: #38bdf8; font-size: 18px; }
                 p.sub { color: #94a3b8; font-size: 11px; }
                 
-                /* Buscador global dinámico */
                 .search-box { width: 100%; margin-bottom: 15px; }
                 .search-box input { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 12px; outline: none; }
                 .search-box input:focus { border-color: #38bdf8; }
 
-                /* Menú de Pestañas Interactivas */
                 .menu-tabs { display: flex; gap: 8px; margin-bottom: 15px; }
                 .tab-btn { flex: 1; background: #1e293b; color: #94a3b8; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 11px; cursor: pointer; transition: 0.2s; text-align: center; }
                 .tab-btn.active { background: #059669; color: white; box-shadow: 0 4px 12px rgba(5,150,105,0.3); }
@@ -133,10 +152,13 @@ app.get('/admin', (req, res) => {
                 .docs a { text-align: center; text-decoration: none; color: #94a3b8; font-size: 8px; }
                 .docs img { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; border: 1px solid #334155; display: block; margin-bottom: 2px; }
                 
-                .actions { display: flex; gap: 6px; margin-top: 8px; }
+                .actions-group { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+                .actions { display: flex; gap: 6px; }
                 .actions button { flex: 1; padding: 7px; border: none; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer; }
                 .btn-approve { background: #059669; color: white; }
                 .btn-reject { background: #dc2626; color: white; }
+                .btn-delete { width: 100%; background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; padding: 7px; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer; text-align: center; }
+                .btn-delete:hover { background: #991b1b; color: #fff; }
                 .empty { font-size: 11px; color: #64748b; font-style: italic; margin-top: 10px; }
             </style>
         </head>
@@ -148,23 +170,19 @@ app.get('/admin', (req, res) => {
                 </div>
             </div>
 
-            <!-- Buscador en vivo para filtrar perfiles instantáneamente -->
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="🔍 Buscar por nombre o número de celular..." onkeyup="filterCards()">
             </div>
 
-            <!-- Menú de Pestañas -->
             <div class="menu-tabs">
                 <button class="tab-btn active" id="btn-tab-clients" onclick="switchTab('clients')">👤 Clientes (${clients.length})</button>
                 <button class="tab-btn" id="btn-tab-drivers" onclick="switchTab('drivers')">🚕 Conductores (${drivers.length})</button>
             </div>
 
-            <!-- Contenedor de Clientes -->
             <div id="tab-clients" class="section-content active">
                 <div class="grid">${clientsHtml}</div>
             </div>
 
-            <!-- Contenedor de Conductores -->
             <div id="tab-drivers" class="section-content">
                 <div class="grid">${driversHtml}</div>
             </div>
@@ -216,13 +234,31 @@ app.get('/admin', (req, res) => {
                         }
                     });
                 }
+
+                function deleteUser(phone, role, name) {
+                    if (confirm('⚠️ ¿Estás completamente seguro de eliminar el perfil de "' + name + '"?\\nEsta acción borrará sus datos de la base de datos y eliminará todas sus fotos y documentos del servidor de forma permanente.')) {
+                        fetch('/admin/delete-user', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ phone, role })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                location.reload();
+                            } else {
+                                alert(data.message);
+                            }
+                        });
+                    }
+                }
             </script>
         </body>
         </html>
     `);
 });
 
-// Endpoint seguro para actualizar estados y guardar de forma persistente absoluta en el archivo JSON
+// Endpoint para actualizar estados
 app.post('/admin/update-status', (req, res) => {
     const { phone, role, status } = req.body;
     const db = getDB();
@@ -235,10 +271,8 @@ app.post('/admin/update-status', (req, res) => {
         return res.json({ success: false, message: "Usuario no encontrado en la base de datos." });
     }
 
-    // Guardado síncrono inmediato en disco
     saveDB(db);
 
-    // Actualización de respaldo en la carpeta interna individual del usuario
     const safePhoneKey = phone.replace(/[^a-zA-Z0-9]/g, '_');
     const infoPath = path.join(UPLOADS_DIR, safePhoneKey, 'info.json');
     if (fs.existsSync(infoPath)) {
@@ -254,9 +288,41 @@ app.post('/admin/update-status', (req, res) => {
     res.json({ success: true });
 });
 
-// Exponer de forma permanente el directorio de archivos multimedia/fotos
+// NUEVO ENDPOINT: Borrado definitivo de perfil y archivos físicos del servidor
+app.post('/admin/delete-user', (req, res) => {
+    const { phone, role } = req.body;
+    const db = getDB();
+
+    let found = false;
+    if (role === 'driver' && db.drivers[phone]) {
+        delete db.drivers[phone];
+        found = true;
+    } else if (role === 'client' && db.clients[phone]) {
+        delete db.clients[phone];
+        found = true;
+    }
+
+    if (!found) {
+        return res.json({ success: false, message: "El usuario ya no existe en la base de datos." });
+    }
+
+    // Guardar cambios en el JSON maestro
+    saveDB(db);
+
+    // Borrar físicamente la carpeta del usuario con todas sus fotos y archivos de documentos
+    const safePhoneKey = phone.replace(/[^a-zA-Z0-9]/g, '_');
+    const userFolderPath = path.join(UPLOADS_DIR, safePhoneKey);
+    try {
+        deleteFolderRecursive(userFolderPath);
+    } catch (e) {
+        console.error("No se pudo eliminar la carpeta física del usuario:", e);
+    }
+
+    res.json({ success: true });
+});
+
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.listen(PORT, () => {
-    console.log(`[LIBREX MASTER ADMIN] Servidor de administración operando en puerto ${PORT} con persistencia permanente.`);
+    console.log(`[LIBREX MASTER ADMIN] Servidor operando en puerto ${PORT} con control total de eliminación.`);
 });
