@@ -34,12 +34,26 @@ function getCodesDB() {
     return JSON.parse(fs.readFileSync(CODES_FILE, 'utf8'));
 }
 
-// Configuración del transporter de Nodemailer para envío real
+// Configuración robusta de Nodemailer optimizada para servicios de Gmail en Render
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // true para puerto 465, false para 587
     auth: {
-        user: process.env.EMAIL_USER || 'vitorinoarenas1000@gmail.com', // Coloca tu correo o variable de entorno
-        pass: process.env.EMAIL_PASS || 'TU_CONTRASENA_DE_APLICACION'   // Coloca tu contraseña de aplicación de Gmail
+        user: process.env.EMAIL_USER || 'vitorinoarenas1000@gmail.com',
+        pass: process.env.EMAIL_PASS || 'TU_CONTRASENA_DE_APLICACION'
+    },
+    tls: {
+        rejectUnauthorized: false
+    }
+});
+
+// Verificación inicial del canal de correo al arrancar
+transporter.verify(function(error, success) {
+    if (error) {
+        console.log("[AVISO SMTP] El servidor de correo no pudo autenticarse automáticamente. Se activará el sistema de respaldo y modo consola si es necesario:", error.message);
+    } else {
+        console.log("[SMTP LISTO] El servidor está listo para enviar correos electrónicos reales.");
     }
 });
 
@@ -150,7 +164,7 @@ app.get('/', (req, res) => {
                     <div class="form-box" id="dynamic-form"></div>
                 </div>
 
-                <div class="footer-note">Librex Secure Persistent v6.1</div>
+                <div class="footer-note">Librex Secure Persistent v6.2</div>
             </div>
 
             <script>
@@ -222,6 +236,10 @@ app.get('/', (req, res) => {
                         alert("Ingresa un correo electrónico válido antes de pedir el código.");
                         return;
                     }
+                    const btn = event.target;
+                    btn.innerText = "Enviando código...";
+                    btn.disabled = true;
+
                     fetch('/api/send-code', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -233,8 +251,14 @@ app.get('/', (req, res) => {
                         if (data.success) {
                             document.getElementById('verification-box').style.display = 'block';
                         }
+                        btn.innerText = "Enviar Código de Verificación ✉️";
+                        btn.disabled = false;
                     })
-                    .catch(() => alert("Error de conexión al enviar el código."));
+                    .catch(() => {
+                        alert("Error de conexión al enviar el código.");
+                        btn.innerText = "Enviar Código de Verificación ✉️";
+                        btn.disabled = false;
+                    });
                 }
 
                 function loginAdmin() {
@@ -305,7 +329,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Generar y Enviar Código Real al Correo mediante Nodemailer
+// 2. Generar y Enviar Código Real al Correo con Respaldo de Emergencia en Consola
 app.post('/api/send-code', async (req, res) => {
     const { email } = req.body;
     if (!email || !email.includes('@')) {
@@ -318,7 +342,7 @@ app.post('/api/send-code', async (req, res) => {
     fs.writeFileSync(CODES_FILE, JSON.stringify(codesDB, null, 2));
 
     const mailOptions = {
-        from: '"Librex Support" <no-reply@librex.com>',
+        from: '"Librex Support" <vitorinoarenas1000@gmail.com>',
         to: email,
         subject: 'Código de Verificación - Librex 🚖',
         html: `
@@ -335,14 +359,14 @@ app.post('/api/send-code', async (req, res) => {
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log(`[CORREO ENVIADO] Código ${verificationCode} enviado exitosamente a ${email}`);
+        console.log(`[CORREO ENVIADO EXITOSAMENTE] Código ${verificationCode} enviado a ${email}`);
         res.json({ success: true, message: `Código de verificación enviado correctamente a ${email}. Revisa tu bandeja de entrada o spam.` });
     } catch (error) {
-        console.error("Error al enviar el correo:", error);
-        // Fallback para desarrollo local si falla el servicio SMTP de correo
+        console.error("⚠️ [ERROR CRÍTICO SMTP GMAIL]:", error.message);
+        console.log(`🔑 [RESPALDO DE EMERGENCIA - CÓDIGO ACTIVO PARA ${email}]: ${verificationCode}`);
         res.json({ 
             success: true, 
-            message: `Código generado (Modo local de respaldo): ${verificationCode}. (Revisa tu consola si el correo demoró)` 
+            message: `[Modo Respaldo Activo] Tu código de verificación temporal es: ${verificationCode}. (Cópialo e ingrésalo en la pantalla)` 
         });
     }
 });
