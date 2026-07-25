@@ -48,7 +48,7 @@ app.post('/api/register', async (req, res) => {
         lastActivity: new Date().toISOString()
     };
 
-    let intentos = 2; // Intentará conectar hasta 2 veces si el servidor central está despertando
+    let intentos = 3; // Intentará conectar hasta 3 veces si el servidor central está despertando
     let exito = false;
     let resultadoAdmin = null;
 
@@ -62,7 +62,7 @@ app.post('/api/register', async (req, res) => {
             }, 60000); // 60 segundos de espera para Render Free Tier
 
             resultadoAdmin = await response.json();
-            if (resultadoAdmin.success) {
+            if (resultadoAdmin && resultadoAdmin.success) {
                 exito = true;
             }
         } catch (error) {
