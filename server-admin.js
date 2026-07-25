@@ -10,7 +10,10 @@ const PORT = process.env.ADMIN_PORT || 3003;
 const DB_FILE = path.join(__dirname, 'librex-transport-db.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
-// Función maestra ultra-segura para garantizar lectura y escritura persistente en disco
+if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 function getDB() {
     if (!fs.existsSync(DB_FILE)) {
         const initialData = { clients: {}, drivers: {}, admins: [] };
@@ -28,12 +31,10 @@ function getDB() {
     }
 }
 
-// Sincronización proactiva: asegura que los datos locales y carpetas físicas jamás se desincronicen
 function saveDB(dbData) {
     fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2));
 }
 
-// Función auxiliar para eliminar recursivamente la carpeta de archivos multimedia de un usuario
 function deleteFolderRecursive(directoryPath) {
     if (fs.existsSync(directoryPath)) {
         fs.readdirSync(directoryPath).forEach((file) => {
@@ -48,7 +49,7 @@ function deleteFolderRecursive(directoryPath) {
     }
 }
 
-// Interfaz Gráfica Maestra: Menú interactivo independiente con pestañas, buscador y control total de borrado
+// Interfaz Gráfica del Panel Maestro
 app.get('/admin', (req, res) => {
     const { key, email } = req.query;
     if (key !== 'librex2026') {
@@ -66,7 +67,6 @@ app.get('/admin', (req, res) => {
     const drivers = Object.values(db.drivers || {});
     const clients = Object.values(db.clients || {});
 
-    // Generador de tarjetas dinámicas para Clientes con Botón de Borrado Total
     let clientsHtml = clients.map(c => `
         <div class="card" data-search="${(c.fullName + ' ' + c.phone).toLowerCase()}">
             <div class="user-info">
@@ -90,7 +90,6 @@ app.get('/admin', (req, res) => {
         </div>
     `).join('') || '<p class="empty">No hay clientes registrados en la base de datos maestra.</p>';
 
-    // Generador de tarjetas dinámicas para Conductores con Botón de Borrado Total
     let driversHtml = drivers.map(d => `
         <div class="card" data-search="${(d.fullName + ' ' + d.phone).toLowerCase()}">
             <div class="user-info">
@@ -258,7 +257,7 @@ app.get('/admin', (req, res) => {
     `);
 });
 
-// Endpoint para actualizar estados
+// Endpoint para actualizar estado
 app.post('/admin/update-status', (req, res) => {
     const { phone, role, status } = req.body;
     const db = getDB();
@@ -272,23 +271,10 @@ app.post('/admin/update-status', (req, res) => {
     }
 
     saveDB(db);
-
-    const safePhoneKey = phone.replace(/[^a-zA-Z0-9]/g, '_');
-    const infoPath = path.join(UPLOADS_DIR, safePhoneKey, 'info.json');
-    if (fs.existsSync(infoPath)) {
-        try {
-            const infoData = JSON.parse(fs.readFileSync(infoPath, 'utf8'));
-            infoData.status = status;
-            fs.writeFileSync(infoPath, JSON.stringify(infoData, null, 2));
-        } catch (e) {
-            console.error("Error sincronizando archivo info.json local:", e);
-        }
-    }
-
     res.json({ success: true });
 });
 
-// NUEVO ENDPOINT: Borrado definitivo de perfil y archivos físicos del servidor
+// Endpoint para borrado definitivo
 app.post('/admin/delete-user', (req, res) => {
     const { phone, role } = req.body;
     const db = getDB();
@@ -306,10 +292,8 @@ app.post('/admin/delete-user', (req, res) => {
         return res.json({ success: false, message: "El usuario ya no existe en la base de datos." });
     }
 
-    // Guardar cambios en el JSON maestro
     saveDB(db);
 
-    // Borrar físicamente la carpeta del usuario con todas sus fotos y archivos de documentos
     const safePhoneKey = phone.replace(/[^a-zA-Z0-9]/g, '_');
     const userFolderPath = path.join(UPLOADS_DIR, safePhoneKey);
     try {
@@ -324,5 +308,5 @@ app.post('/admin/delete-user', (req, res) => {
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.listen(PORT, () => {
-    console.log(`[LIBREX MASTER ADMIN] Servidor operando en puerto ${PORT} con control total de eliminación.`);
+    console.log(`[LIBREX MASTER ADMIN] Servidor operando en puerto ${PORT}`);
 });
