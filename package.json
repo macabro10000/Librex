@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Sistema multiplataforma de movilidad y servicios Librex",
   "main": "server-main.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node server-main.js",
     "start:client": "node server-client.js",
