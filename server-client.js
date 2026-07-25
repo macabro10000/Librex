@@ -7,7 +7,7 @@ app.use(express.json({ limit: '50mb' }));
 
 const PORT = process.env.PORT || 3001;
 
-// URL oficial de tu Servidor Principal/Administrativo en Render o local
+// URL oficial del Servidor Principal/Administrativo en Render
 const MAIN_SERVER_URL = process.env.MAIN_URL || 'https://librex-980i.onrender.com';
 
 // ==========================================
@@ -21,7 +21,7 @@ app.post('/api/cliente/registrar', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Faltan datos obligatorios (phone, fullName).' });
         }
 
-        // Envío usando fetch nativo de Node.js (sin necesidad de instalar axios)
+        // Envío usando fetch nativo de Node.js
         const responseAdmin = await fetch(`${MAIN_SERVER_URL}/api/register/client`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -141,5 +141,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`[SERVER-CLIENT] Microservicio de Clientes activo en puerto ${PORT} sin dependencias externas.`);
+    console.log(`[SERVER-CLIENT] Microservicio de Clientes activo en puerto ${PORT}`);
 });
