@@ -1,7 +1,5 @@
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
-const axios = require('axios'); // Asegúrate de tener instalado axios (npm install axios)
 
 const app = express();
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -23,18 +21,23 @@ app.post('/api/cliente/registrar', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Faltan datos obligatorios (phone, fullName).' });
         }
 
-        // Enviar automáticamente los datos y fotos al Servidor Principal/Administrativo
-        // Esto activará al cliente de forma automática en el panel maestro
-        const responseAdmin = await axios.post(`${MAIN_SERVER_URL}/api/register/client`, {
-            phone,
-            fullName,
-            email,
-            selfieBase64,
-            docFrontBase64,
-            docBackBase64
+        // Envío usando fetch nativo de Node.js (sin necesidad de instalar axios)
+        const responseAdmin = await fetch(`${MAIN_SERVER_URL}/api/register/client`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                phone,
+                fullName,
+                email,
+                selfieBase64,
+                docFrontBase64,
+                docBackBase64
+            })
         });
 
-        if (responseAdmin.data.success) {
+        const data = await responseAdmin.json();
+
+        if (data.success) {
             res.json({ success: true, message: 'Cliente registrado y sincronizado automáticamente con el Administrador.' });
         } else {
             res.status(500).json({ success: false, message: 'El servidor administrativo rechazó el registro.' });
@@ -138,5 +141,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`[SERVER-CLIENT] Microservicio de Clientes activo en puerto ${PORT} con puente de sincronización automática.`);
+    console.log(`[SERVER-CLIENT] Microservicio de Clientes activo en puerto ${PORT} sin dependencias externas.`);
 });
