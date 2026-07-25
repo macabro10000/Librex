@@ -214,6 +214,7 @@ function verificarAdmin(req, res, next) {
 }
 
 app.get('/login', (req, res) => {
+    const errorMsg = req.query.error ? '<p style="color: #f87171; font-size: 13px; margin-bottom: 15px;">Contraseña incorrecta. Intente de nuevo.</p>' : '';
     res.send(`
         <!DOCTYPE html>
         <html lang="es">
@@ -234,6 +235,7 @@ app.get('/login', (req, res) => {
         <body>
             <div class="card">
                 <h2>Panel Maestro Admin</h2>
+                ${errorMsg}
                 <form method="POST" action="/auth">
                     <input type="password" name="password" placeholder="Contraseña Admin" required>
                     <button type="submit">Ingresar</button>
@@ -244,19 +246,26 @@ app.get('/login', (req, res) => {
     `);
 });
 
-app.post('/auth', express.urlencoded({ extended: true }), async (req, res) => {
+app.post('/auth', async (req, res) => {
     try {
         const settings = await Settings.findOne({ key: 'main_settings' });
-        const match = settings && settings.adminPasswordHash ? await bcrypt.compare(req.body.password, settings.adminPasswordHash) : req.body.password === 'admin1234';
+        let match = false;
+
+        if (settings && settings.adminPasswordHash) {
+            match = await bcrypt.compare(req.body.password, settings.adminPasswordHash);
+        } else {
+            match = (req.body.password === 'admin1234');
+        }
         
         if (match) {
             res.cookie('admin_auth', 'librex_master_secure_2026', { httpOnly: true });
-            res.redirect('/');
+            return res.redirect('/');
         } else {
-            res.redirect('/login?error=1');
+            return res.redirect('/login?error=1');
         }
     } catch (e) {
-        res.redirect('/login?error=1');
+        console.error('[AUTH ERROR]', e);
+        return res.redirect('/login?error=1');
     }
 });
 
