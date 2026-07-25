@@ -4,14 +4,10 @@
   "description": "Sistema multiplataforma avanzado de movilidad, transporte y panel maestro Librex",
   "main": "server-main.js",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "node server-main.js",
-    "start:client": "node server-client.js",
-    "start:driver": "node server-driver.js",
-    "start:admin": "node server-admin.js",
-    "dev": "node --watch server-main.js"
+    "start": "node server-main.js"
   },
   "dependencies": {
     "express": "^4.19.2",
