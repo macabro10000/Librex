@@ -1,6 +1,6 @@
 {
   "name": "librex-multiplatform-system",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Sistema multiplataforma avanzado de movilidad, transporte y panel maestro Librex con MongoDB Atlas",
   "main": "server-main.js",
   "engines": {
@@ -17,6 +17,8 @@
     "cookie-parser": "^1.4.6",
     "compression": "^1.7.4",
     "nodemailer": "^6.9.13",
-    "mongodb": "^6.5.0"
+    "mongodb": "^6.5.0",
+    "mongoose": "^8.3.1",
+    "bcryptjs": "^2.4.3"
   }
 }
