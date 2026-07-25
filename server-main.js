@@ -17,12 +17,12 @@ function getDB() {
     return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
 }
 
-// URLs de los servidores auxiliares
+// URLs de los servidores auxiliares en Render o entorno
 const USER_SERVICE_URL = process.env.USER_URL || 'http://localhost:3001';
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'http://localhost:3002';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'http://localhost:3003';
 
-// 1. Pantalla principal con los 3 botones de acceso
+// 1. Pantalla principal con los botones de acceso multiplataforma
 app.get('/', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <title>Librex - Acceso con Google</title>
+            <title>Librex - Acceso Multiplataforma</title>
             <style>
                 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
                 body { background: #090d16; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -52,7 +52,7 @@ app.get('/', (req, res) => {
             <div class="app-container">
                 <div class="header">
                     <h1>LIBREX 🚖</h1>
-                    <p>Seleccione su perfil de acceso</p>
+                    <p>Seleccione su perfil de acceso en tiempo real</p>
                 </div>
                 
                 <div class="menu-zones">
@@ -60,7 +60,7 @@ app.get('/', (req, res) => {
                         <div class="zone-icon">👤</div>
                         <div class="zone-info">
                             <h3>Ingresar como Cliente</h3>
-                            <p>Acceso con cualquier cuenta de Google</p>
+                            <p>Acceso con cuenta Google (Pasajero)</p>
                         </div>
                     </div>
 
@@ -68,7 +68,7 @@ app.get('/', (req, res) => {
                         <div class="zone-icon" style="background: #14532d;">🚗</div>
                         <div class="zone-info">
                             <h3>Ingresar como Conductor</h3>
-                            <p>Registro y acceso con Google</p>
+                            <p>Sincronización de flota y carreras</p>
                         </div>
                     </div>
 
@@ -81,7 +81,7 @@ app.get('/', (req, res) => {
                     </div>
                 </div>
 
-                <div class="footer-note">Librex Security Gateway v2.5</div>
+                <div class="footer-note">Librex Gateway v2.6</div>
             </div>
 
             <script>
@@ -89,7 +89,6 @@ app.get('/', (req, res) => {
                     const email = prompt("Ingrese su correo electrónico de Google para continuar:");
                     if (!email) return;
                     
-                    // Enviar datos al backend para verificar y registrar en DB
                     fetch('/auth', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -103,7 +102,7 @@ app.get('/', (req, res) => {
                             alert(data.message);
                         }
                     })
-                    .catch(err => alert("Error de conexión con el servidor."));
+                    .catch(err => alert("Error de conexión con el servidor principal."));
                 }
             </script>
         </body>
@@ -111,7 +110,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Endpoint de Autenticación, validación y registro en base de datos
+// 2. Endpoint de Autenticación, validación estricta y redirección en tiempo real
 app.post('/auth', (req, res) => {
     const { email, role } = req.body;
     if (!email || !email.includes('@')) {
@@ -120,7 +119,7 @@ app.post('/auth', (req, res) => {
 
     const db = getDB();
 
-    // Validación estricta para el Administrador
+    // Validación y registro por roles
     if (role === 'admin') {
         if (email !== 'vitorinoarenas1000@gmail.com') {
             return res.json({ success: false, message: "Acceso Denegado: Este correo no está autorizado como Administrador." });
@@ -135,14 +134,23 @@ app.post('/auth', (req, res) => {
     // Guardar cambios en la base de datos local JSON
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-    // Definir redirección automática al servidor respectivo
+    // Generar datos adicionales para la interfaz personalizada
+    const name = email.split('@')[0];
+    const picture = `https://www.gravatar.com/avatar/${Buffer.from(email.toLowerCase()).toString('hex')}?d=mp&f=y`;
+
+    // Redirección dinámica al microservicio correspondiente con sus parámetros
     let redirectUrl = USER_SERVICE_URL;
-    if (role === 'driver') redirectUrl = DRIVER_SERVICE_URL;
-    if (role === 'admin') redirectUrl = `${ADMIN_SERVICE_URL}/admin?key=librex2026&email=${encodeURIComponent(email)}`;
+    if (role === 'driver') {
+        redirectUrl = `${DRIVER_SERVICE_URL}/?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&picture=${encodeURIComponent(picture)}`;
+    } else if (role === 'client') {
+        redirectUrl = `${USER_SERVICE_URL}/?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&picture=${encodeURIComponent(picture)}`;
+    } else if (role === 'admin') {
+        redirectUrl = `${ADMIN_SERVICE_URL}/admin?key=librex2026&email=${encodeURIComponent(email)}`;
+    }
 
     res.json({ success: true, redirectUrl: redirectUrl });
 });
 
 app.listen(PORT, () => {
-    console.log(`[SERVER-MAIN] Servidor principal activo y escuchando en puerto ${PORT}`);
+    console.log(`[SERVER-MAIN] Servidor principal (Gateway) activo en puerto ${PORT}`);
 });
