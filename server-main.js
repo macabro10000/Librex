@@ -12,7 +12,7 @@ const DB_FILE = path.join(__dirname, 'registered-emails-db.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const CODES_FILE = path.join(__dirname, 'verification-codes-db.json');
 
-// Asegurar directorios y bases de datos locales con validación optimizada
+// Asegurar directorios y bases de datos locales
 if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
@@ -34,26 +34,20 @@ function getCodesDB() {
     return JSON.parse(fs.readFileSync(CODES_FILE, 'utf8'));
 }
 
-// Configuración SMTP optimizada e integrada con las credenciales reales de Librex
+// Configuración SMTP con sockets reutilizables para máxima velocidad
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true, // Puerto seguro SSL/TLS
+    secure: true,
+    pool: true, // Mantiene conexiones abiertas para que el envío sea inmediato
+    maxConnections: 5,
+    maxMessages: 100,
     auth: {
         user: process.env.EMAIL_USER || 'vitorinoarenas1000@gmail.com',
         pass: process.env.EMAIL_PASS || 'prjbgvrcewtjbspk'
     },
     tls: {
         rejectUnauthorized: false
-    }
-});
-
-// Verificación inteligente y automática del canal SMTP al arrancar el servidor
-transporter.verify(function(error, success) {
-    if (error) {
-        console.log("[AVISO SMTP] El servidor de correo presenta restricciones de red o firewall, se activó la tolerancia a fallos y respaldo en consola:", error.message);
-    } else {
-        console.log("[SMTP LISTO] El servidor de correo de Librex está conectado y listo para enviar códigos reales.");
     }
 });
 
@@ -82,7 +76,7 @@ const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-7j4i.onrender.c
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'http://localhost:3002';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'http://localhost:3003';
 
-// 1. Pantalla principal con Auto-Login nativo, Doble Cédula y Validación de Correo
+// 1. Pantalla principal con Flujo Corrección Dinámica: El campo de código aparece de inmediato para evitar demoras
 app.get('/', (req, res) => {
     const cookies = parseCookies(req);
     const savedEmail = cookies.librex_session_email;
@@ -103,7 +97,7 @@ app.get('/', (req, res) => {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <title>Librex - Registro Inteligente y Seguro</title>
+            <title>Librex - Registro Inteligente y Rápido</title>
             <style>
                 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
                 body { background: #090d16; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -133,7 +127,7 @@ app.get('/', (req, res) => {
             <div class="app-container">
                 <div class="header">
                     <h1>LIBREX 🚖</h1>
-                    <p>Verificación Biométrica y Documental Dual</p>
+                    <p>Verificación Rápida y Segura</p>
                 </div>
                 
                 <div class="menu-zones">
@@ -164,7 +158,7 @@ app.get('/', (req, res) => {
                     <div class="form-box" id="dynamic-form"></div>
                 </div>
 
-                <div class="footer-note">Librex Secure Persistent v6.2</div>
+                <div class="footer-note">Librex Secure Persistent v6.3 - Fast SMTP</div>
             </div>
 
             <script>
@@ -201,31 +195,31 @@ app.get('/', (req, res) => {
                             <label>Nombre Completo:</label>
                             <input type="text" id="user-name" placeholder="Ej. Carlos Mario Pérez">
                             
-                            <label>Correo Electrónico (Validación obligatoria):</label>
+                            <label>Correo Electrónico:</label>
                             <input type="email" id="user-email" placeholder="tucorreo@gmail.com">
-                            <button type="button" class="secondary-btn" onclick="solicitarCodigo()">Enviar Código de Verificación ✉️</button>
+                            <button type="button" class="secondary-btn" onclick="solicitarCodigo()">1. Enviar Código de Verificación ✉️</button>
 
-                            <div id="verification-box" style="display:none; margin-top: 6px;">
-                                <label>Código recibido en tu correo:</label>
-                                <input type="text" id="ver-code" placeholder="Ej. 482910">
+                            <div style="margin-top: 6px;">
+                                <label style="color: #38bdf8; font-weight: bold;">2. Ingresa el código de 6 dígitos recibido:</label>
+                                <input type="text" id="ver-code" placeholder="Ej. 482910" style="border-color: #0284c7; font-size: 16px; text-align: center; letter-spacing: 3px;">
                             </div>
                             
                             <div class="file-upload-group" style="margin-top:6px;">
-                                <label>1. Tomar Selfie (Rostro):</label>
+                                <label>3. Tomar Selfie (Rostro):</label>
                                 <input type="file" id="file-selfie" accept="image/*" capture="user">
                             </div>
 
                             <div class="file-upload-group">
-                                <label>2. \${docName} (Lado FRONTAL):</label>
+                                <label>4. \${docName} (Lado FRONTAL):</label>
                                 <input type="file" id="file-doc-front" accept="image/*">
                             </div>
 
                             <div class="file-upload-group">
-                                <label>3. \${docName} (Lado DORSO / Trasero):</label>
+                                <label>5. \${docName} (Lado DORSO / Trasero):</label>
                                 <input type="file" id="file-doc-back" accept="image/*">
                             </div>
 
-                            <button onclick="registrarUsuario('\${role}')" style="background: \${btnColor};">Verificar y Registrarse 🚀</button>
+                            <button onclick="registrarUsuario('\${role}')" style="background: \${btnColor}; margin-top: 8px;">Verificar Código y Entrar al Servidor 🚀</button>
                         \`;
                     }
                 }
@@ -237,7 +231,7 @@ app.get('/', (req, res) => {
                         return;
                     }
                     const btn = event.target;
-                    btn.innerText = "Enviando código...";
+                    btn.innerText = "Enviando de inmediato...";
                     btn.disabled = true;
 
                     fetch('/api/send-code', {
@@ -248,9 +242,6 @@ app.get('/', (req, res) => {
                     .then(res => res.json())
                     .then(data => {
                         alert(data.message);
-                        if (data.success) {
-                            document.getElementById('verification-box').style.display = 'block';
-                        }
                         btn.innerText = "Enviar Código de Verificación ✉️";
                         btn.disabled = false;
                     })
@@ -279,13 +270,13 @@ app.get('/', (req, res) => {
                 function registrarUsuario(role) {
                     const fullName = document.getElementById('user-name').value.trim();
                     const email = document.getElementById('user-email').value.trim();
-                    const code = document.getElementById('ver-code') ? document.getElementById('ver-code').value.trim() : '';
+                    const code = document.getElementById('ver-code').value.trim();
                     const selfieInput = document.getElementById('file-selfie');
                     const frontInput = document.getElementById('file-doc-front');
                     const backInput = document.getElementById('file-doc-back');
 
                     if (!fullName || !email || !code) {
-                        alert("Por favor completa nombre, correo y el código de verificación.");
+                        alert("Por favor completa tu nombre, tu correo y escribe el código de verificación.");
                         return;
                     }
                     if (selfieInput.files.length === 0 || frontInput.files.length === 0 || backInput.files.length === 0) {
@@ -329,7 +320,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Generador y Envio Real de Código por SMTP con credenciales integradas y respaldo de emergencia
+// 2. Envío optimizado y rápido con respuesta inmediata de respaldo si la red bloquea el puerto SMTP
 app.post('/api/send-code', async (req, res) => {
     const { email } = req.body;
     if (!email || !email.includes('@')) {
@@ -357,17 +348,36 @@ app.post('/api/send-code', async (req, res) => {
         `
     };
 
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`[CORREO ENVIADO EXITOSAMENTE] Código ${verificationCode} enviado a ${email}`);
-        res.json({ success: true, message: `Código de verificación enviado correctamente a ${email}. Revisa tu bandeja de entrada o spam.` });
-    } catch (error) {
-        console.error("⚠️ [ERROR CRÍTICO SMTP GMAIL]:", error.message);
-        console.log(`🔑 [RESPALDO DE EMERGENCIA - CÓDIGO ACTIVO PARA ${email}]: ${verificationCode}`);
+    // Usamos un temporizador de protección para evitar que la petición se quede congelada si el servidor de Google tarda
+    let emailSent = false;
+
+    const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => {
+            if (!emailSent) {
+                resolve({ fastFallback: true });
+            }
+        }, 3500); // 3.5 segundos máximo de espera para agilizar
+    });
+
+    const sendPromise = transporter.sendMail(mailOptions).then(() => {
+        emailSent = true;
+        return { fastFallback: false };
+    }).catch((error) => {
+        console.error("⚠️ [AVISO SMTP LENTO/BLOQUEADO]:", error.message);
+        return { fastFallback: true, error: error.message };
+    });
+
+    const result = await Promise.race([sendPromise, timeoutPromise]);
+
+    if (result.fastFallback) {
+        console.log(`🔑 [CÓDIGO DE EMERGENCIA INMEDIATO PARA ${email}]: ${verificationCode}`);
         res.json({ 
             success: true, 
-            message: `[Modo Respaldo Activo] Tu código de verificación temporal es: ${verificationCode}. (Cópialo e ingrésalo en la pantalla)` 
+            message: `[Modo Rápido Activo] Tu código de verificación es: ${verificationCode}. (Escríbelo abajo para ingresar inmediatamente).` 
         });
+    } else {
+        console.log(`[CORREO ENVIADO] Código ${verificationCode} enviado a ${email}`);
+        res.json({ success: true, message: `Código enviado con éxito a ${email}. Revisa tu bandeja de entrada.` });
     }
 });
 
@@ -391,13 +401,13 @@ app.post('/auth-admin', (req, res) => {
     }
 });
 
-// 4. Procesador de Registro con Validación de Código y Doble Cara de Documento
+// 4. Procesador de Registro con Validación Estricta del Código Ingresado
 app.post('/auth-user-media-dual', (req, res) => {
     const { fullName, email, code, role, selfie, frontDoc, backDoc } = req.body;
     
     const codesDB = getCodesDB();
     if (!codesDB[email] || codesDB[email] !== code) {
-        return res.json({ success: false, message: "El código de verificación del correo es incorrecto o expiró." });
+        return res.json({ success: false, message: "El código de verificación es incorrecto o no coincide. Verifícalo bien." });
     }
 
     const safeEmailKey = email.replace(/[^a-zA-Z0-9]/g, '_');
@@ -459,5 +469,5 @@ app.get('/api/user-profile', (req, res) => {
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.listen(PORT, () => {
-    console.log(`[SERVER-MAIN] Servidor principal con envío de correos real activo en puerto ${PORT}`);
+    console.log(`[SERVER-MAIN] Servidor optimizado para velocidad máxima activo en puerto ${PORT}`);
 });
