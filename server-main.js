@@ -22,6 +22,7 @@ function getDB() {
     const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
     if (Array.isArray(data.clients)) data.clients = {};
     if (Array.isArray(data.drivers)) data.drivers = {};
+    if (!Array.isArray(data.admins)) data.admins = [];
     return data;
 }
 
@@ -48,9 +49,9 @@ function parseCookies(req) {
 
 const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-7j4i.onrender.com';
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'https://librex-ppna.onrender.com';
-const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'http://localhost:3003';
+const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'https://librex-ppna.onrender.com';
 
-// 1. Interfaz Principal / Pantalla de Acceso Estilo App Profesional (Selector de País + Registro Limpio)
+// 1. Interfaz Principal / Pantalla de Acceso con Redirección Inteligente por Sesión Activa
 app.get('/', (req, res) => {
     const cookies = parseCookies(req);
     const savedPhone = cookies.librex_session_phone;
@@ -58,11 +59,13 @@ app.get('/', (req, res) => {
     const savedEmail = cookies.librex_session_email;
 
     if (savedRole === 'admin' && savedEmail) {
-        const redirectUrl = `${ADMIN_SERVICE_URL}/admin?key=librex2026&email=${encodeURIComponent(savedEmail)}`;
-        return res.redirect(redirectUrl);
+        const db = getDB();
+        if (db.admins.includes(savedEmail)) {
+            return res.redirect(`${ADMIN_SERVICE_URL}/admin?key=librex2026&email=${encodeURIComponent(savedEmail)}`);
+        }
     }
 
-    if (savedPhone && savedRole) {
+    if (savedPhone && savedRole && savedRole !== 'admin') {
         const db = getDB();
         const user = savedRole === 'driver' ? db.drivers[savedPhone] : db.clients[savedPhone];
         if (user) {
@@ -281,7 +284,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Autenticación Administrador Maestro
+// 2. Autenticación Administrador Maestro con Persistencia y Enlace en Tiempo Real
 app.post('/auth-admin', (req, res) => {
     const { email, password } = req.body;
     if (email === 'vitorinoarenas1000@gmail.com' && password === '94550Mic@') {
@@ -335,8 +338,10 @@ app.post('/auth-user-direct', (req, res) => {
         registeredAt: new Date().toISOString()
     };
 
+    // Archivo info.json con los datos completos del usuario
     fs.writeFileSync(path.join(userFolder, `info.json`), JSON.stringify(userData, null, 2));
 
+    // Guardar en la base de datos global
     const db = getDB();
     if (role === 'driver') {
         db.drivers[phone] = userData;
