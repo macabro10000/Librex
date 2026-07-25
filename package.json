@@ -10,6 +10,7 @@
     "start:admin": "node server-admin.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "nodemailer": "^6.9.13"
   }
 }
