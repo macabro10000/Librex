@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-// Límite de 50mb para permitir el envío fluido de imágenes en Base64 (selfies y documentos)
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 
@@ -21,7 +20,7 @@ const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-7j4i.onrender.c
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'http://localhost:3002';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'http://localhost:3003';
 
-// 1. Pantalla principal con selección de roles, formulario dinámico y subida de fotos/selfies
+// 1. Pantalla principal con selección de roles y subida ligera
 app.get('/', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -88,12 +87,10 @@ app.get('/', (req, res) => {
                         </div>
                     </div>
 
-                    <div class="form-box" id="dynamic-form">
-                        <!-- El formulario cambia dinámicamente según el rol -->
-                    </div>
+                    <div class="form-box" id="dynamic-form"></div>
                 </div>
 
-                <div class="footer-note">Librex Secure Gateway v5.0</div>
+                <div class="footer-note">Librex Secure Gateway v5.1</div>
             </div>
 
             <script>
@@ -192,7 +189,6 @@ app.get('/', (req, res) => {
                         return;
                     }
 
-                    // Convertir imágenes a Base64 para enviarlas de forma segura por JSON sin base de datos externa
                     const readerSelfie = new FileReader();
                     readerSelfie.readAsDataURL(selfieInput.files[0]);
                     readerSelfie.onload = function () {
@@ -226,7 +222,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Procesador de Autenticación de Administrador (Seguro)
+// 2. Procesador de Administrador
 app.post('/auth-admin', (req, res) => {
     const { email, password } = req.body;
     
@@ -242,9 +238,9 @@ app.post('/auth-admin', (req, res) => {
     }
 });
 
-// 3. Procesador de Registro Multimedia para Clientes y Conductores
+// 3. Procesador seguro: Envía únicamente parámetros ligeros a los microservicios para evitar pantalla en blanco
 app.post('/auth-user-media', (req, res) => {
-    const { email, role, selfie, document } = req.body;
+    const { email, role } = req.body;
     if (!email || !email.includes('@')) {
         return res.json({ success: false, message: "Correo inválido." });
     }
@@ -258,8 +254,8 @@ app.post('/auth-user-media', (req, res) => {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
     const name = email.split('@')[0];
-    // Usamos la selfie cargada por el usuario como su foto de perfil oficial en tiempo real
-    const picture = selfie; 
+    // Avatar estable basado en UI libre para evitar desbordar la URL con imágenes pesadas en Base64
+    const picture = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email)}`;
 
     let redirectUrl = USER_SERVICE_URL;
     if (role === 'driver') {
@@ -271,7 +267,7 @@ app.post('/auth-user-media', (req, res) => {
     res.json({ success: true, redirectUrl: redirectUrl });
 });
 
-// 4. Verificación cruzada de sesiones activas
+// 4. Verificación cruzada
 app.get('/api/verify-session', (req, res) => {
     const { email } = req.query;
     const db = getDB();
@@ -280,5 +276,5 @@ app.get('/api/verify-session', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`[SERVER-MAIN] Servidor principal con validación biométrica/multimedia activo en puerto ${PORT}`);
+    console.log(`[SERVER-MAIN] Servidor principal optimizado activo en puerto ${PORT}`);
 });
