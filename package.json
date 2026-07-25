@@ -1,10 +1,13 @@
 {
-  "name": "librex-main",
+  "name": "librex-multiplatform-system",
   "version": "1.0.0",
-  "description": "Servidor principal Librex con Autenticacion Google",
+  "description": "Sistema multiplataforma de movilidad y servicios Librex",
   "main": "server-main.js",
   "scripts": {
-    "start": "node server-main.js"
+    "start": "node server-main.js",
+    "start:client": "node server-client.js",
+    "start:driver": "node server-driver.js",
+    "start:admin": "node server-admin.js"
   },
   "dependencies": {
     "express": "^4.19.2"
