@@ -1,6 +1,5 @@
 const express = require('express');
 const compression = require('compression');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args)); // Compatible con fetch en Node
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -12,7 +11,24 @@ app.use(compression());
 // URL de tu servidor administrador en Render
 const ADMIN_URL = 'https://librex-980i.onrender.com';
 
-// Registro directo que ahora sincroniza con el Admin
+// Función fetch con AbortController para manejar tiempos de espera largos (ideal para Render Free Tier)
+async function fetchWithTimeout(url, options = {}, timeout = 60000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        throw error;
+    }
+}
+
+// Registro directo que sincroniza con el Admin con reintentos
 app.post('/api/register', async (req, res) => {
     const { phone, fullName, email, selfieBase64, docFrontBase64, docBackBase64 } = req.body;
     if (!phone || !fullName) {
@@ -31,23 +47,38 @@ app.post('/api/register', async (req, res) => {
         lastActivity: new Date().toISOString()
     };
 
-    try {
-        // Enviar el registro al servidor Administrador
-        const response = await fetch(`${ADMIN_URL}/api/admin/sync-client`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nuevoCliente)
-        });
+    let intentos = 2; // Intentará hasta 2 veces si el servidor está despertando
+    let exito = false;
+    let resultadoAdmin = null;
 
-        const resultado = await response.json();
-        if (resultado.success) {
-            return res.json({ success: true, message: '¡Registro de pasajero exitoso y sincronizado!' });
-        } else {
-            return res.status(500).json({ success: false, message: 'Error al sincronizar con el Administrador.' });
+    while (intentos > 0 && !exito) {
+        try {
+            console.log(`[CLIENT-SYNC] Intentando conectar con el Admin... (Intentos restantes: ${intentos})`);
+            const response = await fetchWithTimeout(`${ADMIN_URL}/api/admin/sync-client`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(nuevoCliente)
+            }, 60000); // 60 segundos de espera para darle tiempo a Render a despertar
+
+            resultadoAdmin = await response.json();
+            if (resultadoAdmin.success) {
+                exito = true;
+            }
+        } catch (error) {
+            console.warn(`[CLIENT-SYNC] Falló el intento. Es muy probable que Render esté despertando. Reintentando...`);
+            intentos--;
+            // Esperar 3 segundos antes del siguiente intento
+            await new Promise(resolve => setTimeout(resolve, 3000));
         }
-    } catch (error) {
-        console.error('Error de red al conectar con el Admin:', error);
-        return res.status(500).json({ success: false, message: 'No se pudo conectar con el servidor central.' });
+    }
+
+    if (exito) {
+        return res.json({ success: true, message: '¡Registro de pasajero exitoso y sincronizado!' });
+    } else {
+        return res.status(500).json({ 
+            success: false, 
+            message: 'El servidor central está iniciando (modo reposo). Por favor, espera 30 segundos y vuelve a intentar.' 
+        });
     }
 });
 
@@ -68,6 +99,7 @@ app.get('/', (req, res) => {
                 p { color: #9ca3af; font-size: 14px; margin-bottom: 20px; }
                 input { width: 100%; padding: 12px; margin: 10px 0; background: #1f2937; border: 1px solid #374151; color: #fff; border-radius: 8px; }
                 button { width: 100%; padding: 12px; background: #0284c7; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+                button:disabled { background: #4b5563; cursor: not-allowed; }
             </style>
         </head>
         <body>
@@ -78,26 +110,42 @@ app.get('/', (req, res) => {
                     <input type="text" id="fullName" placeholder="Nombre Completo" required>
                     <input type="tel" id="phone" placeholder="Número de Teléfono" required>
                     <input type="email" id="email" placeholder="Correo Electrónico">
-                    <button type="submit">Registrarse y Pedir Viaje</button>
+                    <button type="submit" id="btnSubmit">Registrarse y Pedir Viaje</button>
                 </form>
                 <div id="msg" style="margin-top: 15px; font-size: 13px;"></div>
             </div>
             <script>
                 document.getElementById('regForm').addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const data = {
-                        fullName: document.getElementById('fullName').value,
-                        phone: document.getElementById('phone').value,
-                        email: document.getElementById('email').value
-                    };
-                    const res = await fetch('/api/register', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
-                    });
-                    const result = await res.json();
-                    document.getElementById('msg').innerText = result.message;
-                    document.getElementById('msg').style.color = result.success ? '#34d399' : '#f87171';
+                    const btn = document.getElementById('btnSubmit');
+                    const msg = document.getElementById('msg');
+                    
+                    btn.disabled = true;
+                    btn.innerText = 'Conectando con el servidor...';
+                    msg.innerText = 'Despertando servidor central, por favor espera...';
+                    msg.style.color = '#38bdf8';
+
+                    try {
+                        const data = {
+                            fullName: document.getElementById('fullName').value,
+                            phone: document.getElementById('phone').value,
+                            email: document.getElementById('email').value
+                        };
+                        const res = await fetch('/api/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                        const result = await res.json();
+                        msg.innerText = result.message;
+                        msg.style.color = result.success ? '#34d399' : '#f87171';
+                    } catch (err) {
+                        msg.innerText = 'Error de red. Intenta nuevamente.';
+                        msg.style.color = '#f87171';
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerText = 'Registrarse y Pedir Viaje';
+                    }
                 });
             </script>
         </body>
