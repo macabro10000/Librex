@@ -47,7 +47,7 @@ function parseCookies(req) {
 }
 
 const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-7j4i.onrender.com';
-const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'http://localhost:3002';
+const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'https://librex-ppna.onrender.com';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'http://localhost:3003';
 
 // 1. Interfaz Principal / Pantalla de Acceso Estilo App Profesional (Selector de País + Registro Limpio)
