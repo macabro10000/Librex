@@ -1,6 +1,6 @@
 const express = require('express');
 const fs = require('fs');
-const path = require('path');
+const path = path = require('path');
 
 const app = express();
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -66,7 +66,7 @@ function renderAdminFloatToolbar(currentContext) {
                 bottom: 15px;
                 left: 50%;
                 transform: translateX(-50%);
-                background: rgba(15, 23, 42, 0.92);
+                background: rgba(15, 23, 42, 0.95);
                 border: 1px solid rgba(56, 189, 248, 0.4);
                 padding: 8px 16px;
                 border-radius: 35px;
@@ -192,7 +192,7 @@ app.get('/', (req, res) => {
                     </div>
                     <div class="form-box" id="dynamic-form"></div>
                 </div>
-                <div class="footer-note">Librex Secure Platform v9.2 • Mobile Edition</div>
+                <div class="footer-note">Librex Secure Platform v9.3 • Mobile Edition</div>
             </div>
             ${adminBarHtml}
             <script>
@@ -210,21 +210,21 @@ app.get('/', (req, res) => {
                 function renderForm(role) {
                     const container = document.getElementById('dynamic-form');
                     if (role === 'admin') {
-                        container.innerHTML = \`
+                        container.innerHTML = `
                             <p style="font-size: 11px; color: #38bdf8; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">Acceso Panel Administrador</p>
                             <label>Correo Electrónico:</label>
                             <input type="email" id="adm-email" placeholder="vitorinoarenas1000@gmail.com">
                             <label>Contraseña:</label>
                             <input type="password" id="adm-pass" placeholder="••••••••••••">
                             <button onclick="loginAdmin()" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); box-shadow: 0 4px 15px rgba(2,132,199,0.4);">Ingresar al Panel 🔐</button>
-                        \`;
+                        `;
                     } else {
                         const title = role === 'client' ? 'Registro de Pasajero' : 'Registro de Conductor';
                         const doc1 = role === 'client' ? 'Cédula o Documento (Frente)' : 'Licencia de Conducción (Frente)';
                         const doc2 = role === 'client' ? 'Cédula o Documento (Dorso)' : 'Tarjeta de Propiedad del Vehículo';
 
-                        container.innerHTML = \`
-                            <p style="font-size: 11px; color: #34d399; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">\${title}</p>
+                        container.innerHTML = `
+                            <p style="font-size: 11px; color: #34d399; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">${title}</p>
                             <label>Nombre y Apellido:</label>
                             <input type="text" id="user-name" placeholder="Ej. Carlos Alberto Pérez">
                             <label>Selecciona tu País y Teléfono:</label>
@@ -245,15 +245,15 @@ app.get('/', (req, res) => {
                                 <input type="file" id="file-selfie" accept="image/*" capture="user">
                             </div>
                             <div class="file-upload-group">
-                                <label>2. \${doc1}:</label>
+                                <label>2. ${doc1}:</label>
                                 <input type="file" id="file-doc-front" accept="image/*">
                             </div>
                             <div class="file-upload-group">
-                                <label>3. \${doc2}:</label>
+                                <label>3. ${doc2}:</label>
                                 <input type="file" id="file-doc-back" accept="image/*">
                             </div>
-                            <button onclick="registrarUsuario('\${role}')">Enviar Solicitud de Registro 🚀</button>
-                        \`;
+                            <button onclick="registrarUsuario('${role}')">Enviar Solicitud de Registro 🚀</button>
+                        `;
                     }
                 }
 
@@ -375,6 +375,7 @@ app.post('/auth-user-direct', (req, res) => {
         fs.writeFileSync(path.join(userFolder, 'back.jpg'), backBuffer);
     } catch (e) {
         console.error("Error guardando archivos en disco:", e);
+        return res.status(500).json({ success: false, message: "Error interno al procesar los archivos multimedia." });
     }
 
     const userData = {
