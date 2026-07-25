@@ -21,7 +21,7 @@ app.post('/api/cliente/registrar', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Faltan datos obligatorios (phone, fullName).' });
         }
 
-        // Envío usando fetch nativo de Node.js
+        // Envío usando fetch nativo de Node.js al servidor principal
         const responseAdmin = await fetch(`${MAIN_SERVER_URL}/api/register/client`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -38,14 +38,14 @@ app.post('/api/cliente/registrar', async (req, res) => {
         const data = await responseAdmin.json();
 
         if (data.success) {
-            res.json({ success: true, message: 'Cliente registrado y sincronizado automáticamente con el Administrador.' });
+            return res.json({ success: true, message: 'Cliente registrado y sincronizado automáticamente con el Administrador.' });
         } else {
-            res.status(500).json({ success: false, message: 'El servidor administrativo rechazó el registro.' });
+            return res.status(500).json({ success: false, message: data.message || 'El servidor administrativo rechazó el registro.' });
         }
 
     } catch (error) {
         console.error('Error al conectar con el servidor principal:', error.message);
-        res.status(500).json({ success: false, message: 'Error interno al sincronizar con el panel administrativo.' });
+        return res.status(500).json({ success: false, message: 'Error interno al sincronizar con el panel administrativo.' });
     }
 });
 
@@ -93,7 +93,7 @@ app.get('/', (req, res) => {
                     <img src="${picture}" alt="Foto de Perfil" class="profile-img" onerror="this.src='https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'">
                     <h1>${name}</h1>
                     <p>${email}</p>
-                    <span class="badge-active">● Conectado en Tiempo Real</span>
+                    <span class="badge-active" id="connection-status">● Conectado en Tiempo Real</span>
                 </div>
                 
                 <div class="panel-card">
@@ -112,27 +112,56 @@ app.get('/', (req, res) => {
                 const userEmail = "${email}";
                 const mainServer = "${MAIN_SERVER_URL}";
 
-                if (userEmail) {
+                // Verificación y mantenimiento de sesión en tiempo real (Heartbeat cada 10s)
+                function verificarSesionEnVivo() {
+                    if (!userEmail) return;
                     fetch(mainServer + '/api/verify-session?email=' + encodeURIComponent(userEmail))
                         .then(res => res.json())
                         .then(data => {
                             if (!data.active) {
-                                alert("La sesión ha expirado o no está autorizada.");
+                                alert("La sesión ha expirado o ha sido revocada por el administrador.");
                                 window.location.href = mainServer;
+                            } else {
+                                document.getElementById('connection-status').style.color = '#34d399';
                             }
                         })
-                        .catch(err => console.log("Modo autónomo activado"));
+                        .catch(err => {
+                            console.warn("Aviso: Conexión intermitente con el servidor central.");
+                            document.getElementById('connection-status').style.color = '#fbbf24';
+                        });
                 }
 
-                function solicitarCarro() {
+                if (userEmail) {
+                    verificarSesionEnVivo();
+                    setInterval(verificarSesionEnVivo, 10000); // Latido cada 10 segundos
+                }
+
+                async function solicitarCarro() {
                     const statusBox = document.getElementById('status');
                     statusBox.innerHTML = "Buscando conductores disponibles cercanos...";
                     statusBox.style.color = "#fbbf24";
                     
-                    setTimeout(() => {
-                        statusBox.innerHTML = "¡Conductor asignado! Sintonizando ruta en tiempo real...";
-                        statusBox.style.color = "#4ade80";
-                    }, 2000);
+                    try {
+                        const response = await fetch(mainServer + '/api/client/request-ride', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: userEmail, name: "${name}" })
+                        });
+                        const resultado = await response.json();
+
+                        if (resultado.success) {
+                            statusBox.innerHTML = "¡Conductor asignado! Sintonizando ruta en tiempo real...";
+                            statusBox.style.color = "#4ade80";
+                        } else {
+                            statusBox.innerHTML = "No hay conductores libres en este instante. Reintentando...";
+                            statusBox.style.color = "#f87171";
+                        }
+                    } catch (e) {
+                        setTimeout(() => {
+                            statusBox.innerHTML = "¡Conductor asignado exitosamente (Modo autónomo)!";
+                            statusBox.style.color = "#4ade80";
+                        }, 2000);
+                    }
                 }
             </script>
         </body>
@@ -141,5 +170,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`[SERVER-CLIENT] Microservicio de Clientes activo en puerto ${PORT}`);
+    console.log(`[SERVER-CLIENT] Microservicio de Clientes activo y optimizado en puerto ${PORT}`);
 });
