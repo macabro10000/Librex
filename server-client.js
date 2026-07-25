@@ -112,7 +112,6 @@ app.get('/', (req, res) => {
                 const userEmail = "${email}";
                 const mainServer = "${MAIN_SERVER_URL}";
 
-                // Verificación y mantenimiento de sesión en tiempo real (Heartbeat cada 10s)
                 function verificarSesionEnVivo() {
                     if (!userEmail) return;
                     fetch(mainServer + '/api/verify-session?email=' + encodeURIComponent(userEmail))
@@ -133,7 +132,7 @@ app.get('/', (req, res) => {
 
                 if (userEmail) {
                     verificarSesionEnVivo();
-                    setInterval(verificarSesionEnVivo, 10000); // Latido cada 10 segundos
+                    setInterval(verificarSesionEnVivo, 10000);
                 }
 
                 async function solicitarCarro() {
