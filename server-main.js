@@ -9,7 +9,6 @@ app.use(express.json({ limit: '50mb' }));
 const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'registered-emails-db.json');
 
-// Base de datos local de correos inscritos por rol
 function getDB() {
     if (!fs.existsSync(DB_FILE)) {
         fs.writeFileSync(DB_FILE, JSON.stringify({ clients: [], drivers: [], admins: [] }, null, 2));
@@ -17,12 +16,12 @@ function getDB() {
     return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
 }
 
-// URLs de los servidores auxiliares en Render o entorno
-const USER_SERVICE_URL = process.env.USER_URL || 'http://localhost:3001';
+// Configura aquí o en las variables de entorno de Render la URL real de tu servidor de clientes
+const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-client.onrender.com';
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'http://localhost:3002';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'http://localhost:3003';
 
-// 1. Pantalla principal con los botones de acceso multiplataforma
+// 1. Pantalla principal del Gateway
 app.get('/', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -52,7 +51,7 @@ app.get('/', (req, res) => {
             <div class="app-container">
                 <div class="header">
                     <h1>LIBREX 🚖</h1>
-                    <p>Seleccione su perfil de acceso en tiempo real</p>
+                    <p>Sincronización Inteligente en Tiempo Real</p>
                 </div>
                 
                 <div class="menu-zones">
@@ -60,7 +59,7 @@ app.get('/', (req, res) => {
                         <div class="zone-icon">👤</div>
                         <div class="zone-info">
                             <h3>Ingresar como Cliente</h3>
-                            <p>Acceso con cuenta Google (Pasajero)</p>
+                            <p>Acceso seguro con cuenta Google</p>
                         </div>
                     </div>
 
@@ -68,7 +67,7 @@ app.get('/', (req, res) => {
                         <div class="zone-icon" style="background: #14532d;">🚗</div>
                         <div class="zone-info">
                             <h3>Ingresar como Conductor</h3>
-                            <p>Sincronización de flota y carreras</p>
+                            <p>Flota de vehículos y asignación</p>
                         </div>
                     </div>
 
@@ -81,7 +80,7 @@ app.get('/', (req, res) => {
                     </div>
                 </div>
 
-                <div class="footer-note">Librex Gateway v2.6</div>
+                <div class="footer-note">Librex Security Gateway v3.0</div>
             </div>
 
             <script>
@@ -110,7 +109,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Endpoint de Autenticación, validación estricta y redirección en tiempo real
+// 2. Autenticación y registro de base de datos
 app.post('/auth', (req, res) => {
     const { email, role } = req.body;
     if (!email || !email.includes('@')) {
@@ -119,10 +118,9 @@ app.post('/auth', (req, res) => {
 
     const db = getDB();
 
-    // Validación y registro por roles
     if (role === 'admin') {
         if (email !== 'vitorinoarenas1000@gmail.com') {
-            return res.json({ success: false, message: "Acceso Denegado: Este correo no está autorizado como Administrador." });
+            return res.json({ success: false, message: "Acceso Denegado: No autorizado como Administrador." });
         }
         if (!db.admins.includes(email)) db.admins.push(email);
     } else if (role === 'driver') {
@@ -131,14 +129,11 @@ app.post('/auth', (req, res) => {
         if (!db.clients.includes(email)) db.clients.push(email);
     }
 
-    // Guardar cambios en la base de datos local JSON
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-    // Generar datos adicionales para la interfaz personalizada
     const name = email.split('@')[0];
     const picture = `https://www.gravatar.com/avatar/${Buffer.from(email.toLowerCase()).toString('hex')}?d=mp&f=y`;
 
-    // Redirección dinámica al microservicio correspondiente con sus parámetros
     let redirectUrl = USER_SERVICE_URL;
     if (role === 'driver') {
         redirectUrl = `${DRIVER_SERVICE_URL}/?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&picture=${encodeURIComponent(picture)}`;
@@ -151,6 +146,14 @@ app.post('/auth', (req, res) => {
     res.json({ success: true, redirectUrl: redirectUrl });
 });
 
+// 3. API de verificación cruzada para que el microservicio de clientes confirme sesiones
+app.get('/api/verify-session', (req, res) => {
+    const { email } = req.query;
+    const db = getDB();
+    const isActive = db.clients.includes(email) || db.drivers.includes(email) || db.admins.includes(email);
+    res.json({ active: isActive });
+});
+
 app.listen(PORT, () => {
-    console.log(`[SERVER-MAIN] Servidor principal (Gateway) activo en puerto ${PORT}`);
+    console.log(`[SERVER-MAIN] Servidor principal activo en puerto ${PORT}`);
 });
