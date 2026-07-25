@@ -57,7 +57,6 @@ const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-7j4i.onrender.c
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'https://librex-ppna.onrender.com';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'https://librex-ppna.onrender.com';
 
-// Barra Flotante Avanzada para Administradores
 function renderAdminFloatToolbar(currentContext) {
     return `
         <style>
@@ -110,7 +109,6 @@ function renderAdminFloatToolbar(currentContext) {
     `;
 }
 
-// 1. Interfaz Principal / Home
 app.get('/', (req, res) => {
     const cookies = parseCookies(req);
     const savedRole = cookies.librex_session_role;
@@ -210,21 +208,21 @@ app.get('/', (req, res) => {
                 function renderForm(role) {
                     const container = document.getElementById('dynamic-form');
                     if (role === 'admin') {
-                        container.innerHTML = `
+                        container.innerHTML = \`
                             <p style="font-size: 11px; color: #38bdf8; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">Acceso Panel Administrador</p>
                             <label>Correo Electrónico:</label>
                             <input type="email" id="adm-email" placeholder="vitorinoarenas1000@gmail.com">
                             <label>Contraseña:</label>
                             <input type="password" id="adm-pass" placeholder="••••••••••••">
                             <button onclick="loginAdmin()" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); box-shadow: 0 4px 15px rgba(2,132,199,0.4);">Ingresar al Panel 🔐</button>
-                        `;
+                        \`;
                     } else {
                         const title = role === 'client' ? 'Registro de Pasajero' : 'Registro de Conductor';
                         const doc1 = role === 'client' ? 'Cédula o Documento (Frente)' : 'Licencia de Conducción (Frente)';
                         const doc2 = role === 'client' ? 'Cédula o Documento (Dorso)' : 'Tarjeta de Propiedad del Vehículo';
 
-                        container.innerHTML = `
-                            <p style="font-size: 11px; color: #34d399; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">${title}</p>
+                        container.innerHTML = \`
+                            <p style="font-size: 11px; color: #34d399; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">\${title}</p>
                             <label>Nombre y Apellido:</label>
                             <input type="text" id="user-name" placeholder="Ej. Carlos Alberto Pérez">
                             <label>Selecciona tu País y Teléfono:</label>
@@ -245,15 +243,15 @@ app.get('/', (req, res) => {
                                 <input type="file" id="file-selfie" accept="image/*" capture="user">
                             </div>
                             <div class="file-upload-group">
-                                <label>2. ${doc1}:</label>
+                                <label>2. \${doc1}:</label>
                                 <input type="file" id="file-doc-front" accept="image/*">
                             </div>
                             <div class="file-upload-group">
-                                <label>3. ${doc2}:</label>
+                                <label>3. \${doc2}:</label>
                                 <input type="file" id="file-doc-back" accept="image/*">
                             </div>
-                            <button onclick="registrarUsuario('${role}')">Enviar Solicitud de Registro 🚀</button>
-                        `;
+                            <button onclick="registrarUsuario('\${role}')">Enviar Solicitud de Registro 🚀</button>
+                        \`;
                     }
                 }
 
@@ -327,7 +325,6 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Autenticación de Administrador Maestro
 app.post('/auth-admin', (req, res) => {
     const { email, password } = req.body;
     if (email === 'vitorinoarenas1000@gmail.com' && password === '94550Mic@') {
@@ -347,7 +344,6 @@ app.post('/auth-admin', (req, res) => {
     }
 });
 
-// 3. Ruta de Logout
 app.get('/admin-logout', (req, res) => {
     res.setHeader('Set-Cookie', [
         `librex_session_email=; Path=/; Max-Age=0; HttpOnly`,
@@ -356,7 +352,6 @@ app.get('/admin-logout', (req, res) => {
     res.redirect('/');
 });
 
-// 4. Endpoint de Registro Directo
 app.post('/auth-user-direct', (req, res) => {
     const { fullName, phone, role, selfie, frontDoc, backDoc } = req.body;
     const safePhoneKey = phone.replace(/[^a-zA-Z0-9]/g, '_');
