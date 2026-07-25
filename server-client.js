@@ -1,5 +1,7 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
+const axios = require('axios'); // Asegúrate de tener instalado axios (npm install axios)
 
 const app = express();
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -7,9 +9,46 @@ app.use(express.json({ limit: '50mb' }));
 
 const PORT = process.env.PORT || 3001;
 
-// URL oficial de tu Servidor Principal en Render
+// URL oficial de tu Servidor Principal/Administrativo en Render o local
 const MAIN_SERVER_URL = process.env.MAIN_URL || 'https://librex-980i.onrender.com';
 
+// ==========================================
+// ENDPOINT PARA RECIBIR Y SINCRONIZAR EL REGISTRO
+// ==========================================
+app.post('/api/cliente/registrar', async (req, res) => {
+    try {
+        const { phone, fullName, email, selfieBase64, docFrontBase64, docBackBase64 } = req.body;
+        
+        if (!phone || !fullName) {
+            return res.status(400).json({ success: false, message: 'Faltan datos obligatorios (phone, fullName).' });
+        }
+
+        // Enviar automáticamente los datos y fotos al Servidor Principal/Administrativo
+        // Esto activará al cliente de forma automática en el panel maestro
+        const responseAdmin = await axios.post(`${MAIN_SERVER_URL}/api/register/client`, {
+            phone,
+            fullName,
+            email,
+            selfieBase64,
+            docFrontBase64,
+            docBackBase64
+        });
+
+        if (responseAdmin.data.success) {
+            res.json({ success: true, message: 'Cliente registrado y sincronizado automáticamente con el Administrador.' });
+        } else {
+            res.status(500).json({ success: false, message: 'El servidor administrativo rechazó el registro.' });
+        }
+
+    } catch (error) {
+        console.error('Error al conectar con el servidor principal:', error.message);
+        res.status(500).json({ success: false, message: 'Error interno al sincronizar con el panel administrativo.' });
+    }
+});
+
+// ==========================================
+// VISTA PRINCIPAL DEL PANEL DE CLIENTES
+// ==========================================
 app.get('/', (req, res) => {
     const email = req.query.email || '';
     const name = req.query.name || 'Pasajero Librex';
@@ -99,5 +138,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`[SERVER-CLIENT] Microservicio de Clientes activo en puerto ${PORT}`);
+    console.log(`[SERVER-CLIENT] Microservicio de Clientes activo en puerto ${PORT} con puente de sincronización automática.`);
 });
