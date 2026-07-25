@@ -7,8 +7,8 @@ app.use(express.json({ limit: '50mb' }));
 
 const PORT = process.env.PORT || 3001;
 
-// Reemplaza con la URL pública real de tu servidor principal en Render
-const MAIN_SERVER_URL = process.env.MAIN_URL || 'https://tu-servidor-principal.onrender.com';
+// URL oficial de tu Servidor Principal en Render
+const MAIN_SERVER_URL = process.env.MAIN_URL || 'https://librex-980i.onrender.com';
 
 app.get('/', (req, res) => {
     const email = req.query.email || '';
@@ -70,7 +70,6 @@ app.get('/', (req, res) => {
                 const userEmail = "${email}";
                 const mainServer = "${MAIN_SERVER_URL}";
 
-                // Verificación cruzada de sesión en tiempo real con el servidor principal
                 if (userEmail) {
                     fetch(mainServer + '/api/verify-session?email=' + encodeURIComponent(userEmail))
                         .then(res => res.json())
