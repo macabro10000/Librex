@@ -65,7 +65,7 @@ app.post('/api/register', async (req, res) => {
             if (resultadoAdmin && resultadoAdmin.success) {
                 exito = true;
             } else {
-                // Si el servidor admin rechaza por duplicado, salimos del ciclo de inmediato
+                // Si el servidor admin rechaza por duplicado o datos inválidos, salimos del ciclo de inmediato
                 return res.status(400).json(resultadoAdmin);
             }
         } catch (error) {
