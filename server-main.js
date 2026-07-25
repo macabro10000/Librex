@@ -12,7 +12,6 @@ app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 app.use(compression());
 
-// Rutas de las bases de datos locales (compartidas o enlazadas al entorno de los otros microservicios)
 const DB_DIR = path.join(__dirname, 'database');
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 
@@ -34,11 +33,33 @@ function escribirJSON(filePath, data) {
 function obtenerConfig() {
     let settings = leerJSON(SETTINGS_FILE);
     if (!settings.commissionRate) {
-        settings = { commissionRate: 10 }; // 10% por defecto
+        settings = { commissionRate: 10 };
         escribirJSON(SETTINGS_FILE, settings);
     }
     return settings;
 }
+
+// ==========================================
+// ENDPOINT DE SINCRONIZACIÓN (Recibe datos de Clientes)
+// ==========================================
+app.post('/api/admin/sync-client', (req, res) => {
+    const nuevoCliente = req.body;
+    if (!nuevoCliente.id || !nuevoCliente.phone) {
+        return res.status(400).json({ success: false, message: 'Datos incompletos.' });
+    }
+
+    let clients = leerJSON(CLIENTS_FILE);
+    // Verificar si ya existe para actualizar o agregar
+    const index = clients.findIndex(c => c.phone === nuevoCliente.phone);
+    if (index !== -1) {
+        clients[index] = { ...clients[index], ...nuevoCliente, lastActivity: new Date().toISOString() };
+    } else {
+        clients.push({ ...nuevoCliente, balance: 0, lastActivity: new Date().toISOString() });
+    }
+
+    escribirJSON(CLIENTS_FILE, clients);
+    return res.json({ success: true, message: 'Cliente sincronizado correctamente en el Admin.' });
+});
 
 // ==========================================
 // MIDDLEWARE DE AUTENTICACIÓN
@@ -87,7 +108,7 @@ app.get('/login', (req, res) => {
 
 app.post('/auth', express.urlencoded({ extended: true }), (req, res) => {
     const { password } = req.body;
-    if (password === 'admin1234') { // Cambia tu contraseña maestra aquí si deseas
+    if (password === 'admin1234') {
         res.cookie('admin_auth', 'librex_master_secure_2026', { httpOnly: true });
         res.redirect('/');
     } else {
@@ -126,7 +147,6 @@ app.get('/', verificarAdmin, (req, res) => {
                 .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 25px; }
                 .card { background: #0f172a; padding: 20px; border-radius: 16px; border: 1px solid #1e293b; }
                 .card h3 { color: #94a3b8; font-size: 14px; margin-bottom: 10px; }
-                .card .val { font-size: 24px; font-weight: bold; color: #fff; }
 
                 .section { background: #0f172a; padding: 25px; border-radius: 16px; border: 1px solid #1e293b; margin-bottom: 25px; }
                 .section h2 { color: #38bdf8; font-size: 18px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
@@ -179,14 +199,14 @@ app.get('/', verificarAdmin, (req, res) => {
                         ${drivers.map(d => {
                             const ultimoAcceso = d.lastActivity ? new Date(d.lastActivity) : new Date(d.createdAt || Date.now());
                             const minutosInactivo = Math.floor((Date.now() - ultimoAcceso.getTime()) / 60000);
-                            const activo = minutosInactivo < 5; // Activo si tuvo actividad en los últimos 5 min
+                            const activo = minutosInactivo < 5;
                             return `
                                 <tr>
                                     <td><strong>${d.fullName}</strong></td>
                                     <td>${d.phone}<br><span style="color:#64748b;">${d.email}</span></td>
                                     <td><strong>$${d.balance || 0}</strong></td>
                                     <td>
-                                        ${activo ? '<span class="badge badge-active">● Activo (Hace ' + minutosInactivo + 'm)</span>' : '<span class="badge badge-inactive">● Inactivo (' + minutosInactivo + 'm sin actividad)</span>'}
+                                        ${activo ? '<span class="badge badge-active">● Activo (Hace ' + minutosInactivo + 'm)</span>' : '<span class="badge badge-inactive">● Inactivo (' + minutosInactivo + 'm)</span>'}
                                     </td>
                                     <td>
                                         <button class="btn btn-gift" onclick="darSaldo('${d.id}', 'driver')">🎁 Dar Saldo</button>
@@ -235,7 +255,6 @@ app.get('/', verificarAdmin, (req, res) => {
             </div>
 
             <script>
-                // Auto recarga cada 10 segundos para ver estados en tiempo real (verde/rojo)
                 setTimeout(() => { window.location.reload(); }, 10000);
 
                 async function darSaldo(id, tipo) {
@@ -284,9 +303,6 @@ app.get('/', verificarAdmin, (req, res) => {
     `);
 });
 
-// ==========================================
-// ENDPOINTS DE GESTIÓN Y ACCIONES DEL ADMIN
-// ==========================================
 app.post('/api/admin/settings', verificarAdmin, (req, res) => {
     const { commissionRate } = req.body;
     escribirJSON(SETTINGS_FILE, { commissionRate: parseFloat(commissionRate) || 10 });
