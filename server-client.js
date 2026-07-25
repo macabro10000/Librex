@@ -1,7 +1,6 @@
 const express = require('express');
 const compression = require('compression');
-const fs = require('fs');
-const path = require('path');
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args)); // Compatible con fetch en Node
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -10,29 +9,16 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 
-const DB_DIR = path.join(__dirname, 'database');
-if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
-const CLIENTS_FILE = path.join(DB_DIR, 'clients.json');
+// URL de tu servidor administrador en Render
+const ADMIN_URL = 'https://librex-980i.onrender.com';
 
-function leerJSON(filePath) {
-    try {
-        if (!fs.existsSync(filePath)) return [];
-        return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    } catch (e) { return []; }
-}
-
-function escribirJSON(filePath, data) {
-    try { fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8'); } catch (e) {}
-}
-
-// Registro directo en el servidor de clientes
-app.post('/api/register', (req, res) => {
+// Registro directo que ahora sincroniza con el Admin
+app.post('/api/register', async (req, res) => {
     const { phone, fullName, email, selfieBase64, docFrontBase64, docBackBase64 } = req.body;
     if (!phone || !fullName) {
         return res.status(400).json({ success: false, message: 'Datos incompletos.' });
     }
 
-    let clients = leerJSON(CLIENTS_FILE);
     const nuevoCliente = {
         id: Date.now().toString(),
         phone,
@@ -41,13 +27,28 @@ app.post('/api/register', (req, res) => {
         selfieBase64: selfieBase64 || '',
         docFrontBase64: docFrontBase64 || '',
         docBackBase64: docBackBase64 || '',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        lastActivity: new Date().toISOString()
     };
 
-    clients.push(nuevoCliente);
-    escribirJSON(CLIENTS_FILE, clients);
+    try {
+        // Enviar el registro al servidor Administrador
+        const response = await fetch(`${ADMIN_URL}/api/admin/sync-client`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nuevoCliente)
+        });
 
-    return res.json({ success: true, message: '¡Registro de pasajero exitoso!' });
+        const resultado = await response.json();
+        if (resultado.success) {
+            return res.json({ success: true, message: '¡Registro de pasajero exitoso y sincronizado!' });
+        } else {
+            return res.status(500).json({ success: false, message: 'Error al sincronizar con el Administrador.' });
+        }
+    } catch (error) {
+        console.error('Error de red al conectar con el Admin:', error);
+        return res.status(500).json({ success: false, message: 'No se pudo conectar con el servidor central.' });
+    }
 });
 
 // Interfaz Principal / App de Clientes
