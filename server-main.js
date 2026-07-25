@@ -55,6 +55,12 @@ app.get('/', (req, res) => {
     const cookies = parseCookies(req);
     const savedPhone = cookies.librex_session_phone;
     const savedRole = cookies.librex_session_role;
+    const savedEmail = cookies.librex_session_email;
+
+    if (savedRole === 'admin' && savedEmail) {
+        const redirectUrl = `${ADMIN_SERVICE_URL}/admin?key=librex2026&email=${encodeURIComponent(savedEmail)}`;
+        return res.redirect(redirectUrl);
+    }
 
     if (savedPhone && savedRole) {
         const db = getDB();
@@ -325,14 +331,12 @@ app.post('/auth-user-direct', (req, res) => {
         selfieUrl: `/uploads/${safePhoneKey}/selfie.jpg`,
         docFrontUrl: `/uploads/${safePhoneKey}/front.jpg`,
         docBackUrl: `/uploads/${safePhoneKey}/back.jpg`,
-        status: 'pending_review', // Quedan pendientes hasta que tú los actives manualmente
+        status: 'pending_review',
         registeredAt: new Date().toISOString()
     };
 
-    // Archivo info.json con los datos completos del usuario
     fs.writeFileSync(path.join(userFolder, `info.json`), JSON.stringify(userData, null, 2));
 
-    // Guardar en la base de datos global
     const db = getDB();
     if (role === 'driver') {
         db.drivers[phone] = userData;
