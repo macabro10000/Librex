@@ -25,6 +25,10 @@ function getDB() {
     return data;
 }
 
+function saveDB(dbData) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2));
+}
+
 function parseCookies(req) {
     const list = {};
     const cookieHeader = req.headers.cookie;
@@ -49,7 +53,6 @@ const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-7j4i.onrender.c
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'https://librex-ppna.onrender.com';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'https://librex-ppna.onrender.com';
 
-// Generador de Barra Flotante Exclusiva para el Administrador
 function renderAdminFloatToolbar(currentContext) {
     return `
         <style>
@@ -101,7 +104,7 @@ function renderAdminFloatToolbar(currentContext) {
     `;
 }
 
-// 1. Interfaz Principal
+// 1. Interfaz Principal / Inicio
 app.get('/', (req, res) => {
     const cookies = parseCookies(req);
     const savedRole = cookies.librex_session_role;
@@ -130,14 +133,6 @@ app.get('/', (req, res) => {
                 .zone-icon { font-size: 20px; background: #334155; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
                 .zone-info h3 { font-size: 12px; font-weight: 700; color: #f8fafc; }
                 .zone-info p { font-size: 9px; color: #94a3b8; }
-                .form-box { background: #1e293b; padding: 12px; border-radius: 14px; border: 1px solid #334155; }
-                .form-box label { font-size: 10px; color: #cbd5e1; display: block; margin-bottom: 2px; font-weight: 600; }
-                .form-box input, .form-box select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #475569; background: #020617; color: white; font-size: 12px; margin-bottom: 6px; }
-                .phone-group { display: flex; gap: 6px; }
-                .phone-group select { width: 110px; }
-                .file-upload-group { margin-bottom: 6px; background: #020617; padding: 6px; border-radius: 8px; border: 1px dashed #475569; }
-                .file-upload-group label { color: #34d399; font-size: 9px; }
-                .form-box button { width: 100%; padding: 11px; border-radius: 10px; background: #059669; color: white; border: none; font-weight: 800; font-size: 12px; cursor: pointer; margin-top: 4px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); }
                 .footer-note { text-align: center; font-size: 9px; color: #64748b; margin-bottom: 4px; }
             </style>
         </head>
@@ -148,242 +143,78 @@ app.get('/', (req, res) => {
                     <p>Movilidad Profesional Verificada</p>
                 </div>
                 <div class="menu-zones">
-                    <div class="zone-card" id="card-client" onclick="switchRole('client')" style="border-color: #059669;">
+                    <div class="zone-card" onclick="window.location.href='${USER_SERVICE_URL}'" style="border-color: #059669;">
                         <div class="zone-icon">👤</div>
                         <div class="zone-info">
                             <h3>Pasajero / Cliente</h3>
                             <p>Solicita viajes de forma segura</p>
                         </div>
                     </div>
-                    <div class="zone-card" id="card-driver" onclick="switchRole('driver')" style="border-color: #334155;">
+                    <div class="zone-card" onclick="window.location.href='${DRIVER_SERVICE_URL}'" style="border-color: #334155;">
                         <div class="zone-icon" style="background: #065f46;">🚕</div>
                         <div class="zone-info">
                             <h3>Conductor Partner</h3>
-                            <p>Maneja y genera ganancias diarias</p>
+                            <p>Conduce y genera ingresos</p>
                         </div>
                     </div>
-                    <div class="zone-card" id="card-admin" onclick="switchRole('admin')" style="border-color: #334155;">
-                        <div class="zone-icon" style="background: #1e3a8a;">⚙️</div>
-                        <div class="zone-info">
-                            <h3>Panel Maestro</h3>
-                            <p>Revisión y activación de flota</p>
-                        </div>
-                    </div>
-                    <div class="form-box" id="dynamic-form"></div>
                 </div>
-                <div class="footer-note">Librex Secure Platform v9.0</div>
+                <div class="footer-note">Librex System Gateway © 2026</div>
             </div>
             ${adminBarHtml}
-            <script>
-                let currentRole = 'client';
-                renderForm('client');
-
-                function switchRole(role) {
-                    currentRole = role;
-                    document.getElementById('card-client').style.borderColor = role === 'client' ? '#059669' : '#334155';
-                    document.getElementById('card-driver').style.borderColor = role === 'driver' ? '#047857' : '#334155';
-                    document.getElementById('card-admin').style.borderColor = role === 'admin' ? '#1d4ed8' : '#334155';
-                    renderForm(role);
-                }
-
-                function renderForm(role) {
-                    const container = document.getElementById('dynamic-form');
-                    if (role === 'admin') {
-                        container.innerHTML = \`
-                            <p style="font-size: 11px; color: #38bdf8; margin-bottom: 6px; font-weight: bold;">Acceso Panel Administrador</p>
-                            <label>Correo Electrónico:</label>
-                            <input type="email" id="adm-email" placeholder="vitorinoarenas1000@gmail.com">
-                            <label>Contraseña:</label>
-                            <input type="password" id="adm-pass" placeholder="••••••••••••">
-                            <button onclick="loginAdmin()">Ingresar al Panel 🔐</button>
-                        \`;
-                    } else {
-                        const title = role === 'client' ? 'Registro de Pasajero' : 'Registro de Conductor';
-                        const doc1 = role === 'client' ? 'Cédula o Documento (Frente)' : 'Licencia de Conducción (Frente)';
-                        const doc2 = role === 'client' ? 'Cédula o Documento (Dorso)' : 'Tarjeta de Propiedad del Vehículo';
-
-                        container.innerHTML = \`
-                            <p style="font-size: 11px; color: #34d399; margin-bottom: 6px; font-weight: bold;">\${title}</p>
-                            <label>Nombre y Apellido:</label>
-                            <input type="text" id="user-name" placeholder="Ej. Carlos Alberto Pérez">
-                            <label>Selecciona tu País y Teléfono:</label>
-                            <div class="phone-group">
-                                <select id="country-code">
-                                    <option value="+57">🇨🇴 +57 (Colombia)</option>
-                                    <option value="+58">🇻🇪 +58 (Venezuela)</option>
-                                    <option value="+51">🇵🇪 +51 (Perú)</option>
-                                    <option value="+52">🇲🇽 +52 (México)</option>
-                                    <option value="+54">🇦🇷 +54 (Argentina)</option>
-                                    <option value="+1">🇺🇸 +1 (USA / Int)</option>
-                                    <option value="+34">🇪🇸 +34 (España)</option>
-                                </select>
-                                <input type="tel" id="user-phone" placeholder="3001234567">
-                            </div>
-                            <div class="file-upload-group">
-                                <label>1. Fotografía de tu Rostro (Selfie):</label>
-                                <input type="file" id="file-selfie" accept="image/*" capture="user">
-                            </div>
-                            <div class="file-upload-group">
-                                <label>2. \${doc1}:</label>
-                                <input type="file" id="file-doc-front" accept="image/*">
-                            </div>
-                            <div class="file-upload-group">
-                                <label>3. \${doc2}:</label>
-                                <input type="file" id="file-doc-back" accept="image/*">
-                            </div>
-                            <button onclick="registrarUsuario('\${role}')">Enviar Solicitud de Registro 🚀</button>
-                        \`;
-                    }
-                }
-
-                function loginAdmin() {
-                    const email = document.getElementById('adm-email').value.trim();
-                    const password = document.getElementById('adm-pass').value.trim();
-                    fetch('/auth-admin', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) window.location.href = data.redirectUrl;
-                        else alert(data.message);
-                    });
-                }
-
-                function registrarUsuario(role) {
-                    const fullName = document.getElementById('user-name').value.trim();
-                    const country = document.getElementById('country-code').value;
-                    const rawPhone = document.getElementById('user-phone').value.trim();
-                    const phone = country + rawPhone;
-
-                    const selfieInput = document.getElementById('file-selfie');
-                    const frontInput = document.getElementById('file-doc-front');
-                    const backInput = document.getElementById('file-doc-back');
-
-                    if (!fullName || !rawPhone) {
-                        alert("Por favor completa tu nombre y número de celular.");
-                        return;
-                    }
-                    if (selfieInput.files.length === 0 || frontInput.files.length === 0 || backInput.files.length === 0) {
-                        alert("Es obligatorio adjuntar tu selfie y ambos documentos requeridos.");
-                        return;
-                    }
-
-                    const reader = new FileReader();
-                    reader.readAsDataURL(selfieInput.files[0]);
-                    reader.onload = function(e1) {
-                        const selfie = e1.target.result;
-                        const r2 = new FileReader();
-                        r2.readAsDataURL(frontInput.files[0]);
-                        r2.onload = function(e2) {
-                            const frontDoc = e2.target.result;
-                            const r3 = new FileReader();
-                            r3.readAsDataURL(backInput.files[0]);
-                            r3.onload = function(e3) {
-                                const backDoc = e3.target.result;
-                                fetch('/auth-user-direct', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ fullName, phone, role, selfie, frontDoc, backDoc })
-                                })
-                                .then(res => res.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        alert(data.message);
-                                        location.reload();
-                                    } else {
-                                        alert(data.message);
-                                    }
-                                });
-                            };
-                        };
-                    };
-                }
-            </script>
         </body>
         </html>
     `);
 });
 
-// 2. Autenticación de Administrador Maestro y Activación de Cookie Persistente
-app.post('/auth-admin', (req, res) => {
-    const { email, password } = req.body;
-    if (email === 'vitorinoarenas1000@gmail.com' && password === '94550Mic@') {
-        const db = getDB();
-        if (!db.admins.includes(email)) db.admins.push(email);
-        fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-
-        res.setHeader('Set-Cookie', [
-            `librex_session_email=${encodeURIComponent(email)}; Path=/; Max-Age=${30 * 24 * 60 * 60}; HttpOnly; SameSite=Lax`,
-            `librex_session_role=admin; Path=/; Max-Age=${30 * 24 * 60 * 60}; HttpOnly; SameSite=Lax`
-        ]);
-
-        const redirectUrl = `${ADMIN_SERVICE_URL}/admin?key=librex2026&email=${encodeURIComponent(email)}`;
-        return res.json({ success: true, redirectUrl });
-    } else {
-        return res.json({ success: false, message: "Credenciales de administrador incorrectas." });
-    }
-});
-
-// 3. Ruta para cerrar sesión de Administrador y limpiar cookies
-app.get('/admin-logout', (req, res) => {
-    res.setHeader('Set-Cookie', [
-        `librex_session_email=; Path=/; Max-Age=0; HttpOnly`,
-        `librex_session_role=; Path=/; Max-Age=0; HttpOnly`
-    ]);
-    res.redirect('/');
-});
-
-app.post('/auth-user-direct', (req, res) => {
-    const { fullName, phone, role, selfie, frontDoc, backDoc } = req.body;
-    const safePhoneKey = phone.replace(/[^a-zA-Z0-9]/g, '_');
-    const userFolder = path.join(UPLOADS_DIR, safePhoneKey);
-    if (!fs.existsSync(userFolder)) {
-        fs.mkdirSync(userFolder, { recursive: true });
-    }
-
+// 2. Endpoint para recibir registros de clientes y guardarlos en el JSON general
+app.post('/api/register/client', (req, res) => {
     try {
-        const selfieBuffer = Buffer.from(selfie.split(',')[1], 'base64');
-        const frontBuffer = Buffer.from(frontDoc.split(',')[1], 'base64');
-        const backBuffer = Buffer.from(backDoc.split(',')[1], 'base64');
+        const { phone, fullName, email, selfieBase64, docFrontBase64, docBackBase64 } = req.body;
+        const db = getDB();
 
-        fs.writeFileSync(path.join(userFolder, `selfie.jpg`), selfieBuffer);
-        fs.writeFileSync(path.join(userFolder, `front.jpg`), frontBuffer);
-        fs.writeFileSync(path.join(userFolder, `back.jpg`), backBuffer);
+        const safePhoneKey = phone.replace(/[^a-zA-Z0-9]/g, '_');
+        const userDir = path.join(UPLOADS_DIR, safePhoneKey);
+        if (!fs.existsSync(userDir)) {
+            fs.mkdirSync(userDir, { recursive: true });
+        }
+
+        let selfieUrl = '';
+        let docFrontUrl = '';
+        let docBackUrl = '';
+
+        if (selfieBase64) {
+            const matches = selfieBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/;
+            const buffer = Buffer.from(matches ? matches[2] : selfieBase64, 'base64');
+            fs.writeFileSync(path.join(userDir, 'selfie.jpg'), buffer);
+            selfieUrl = `/uploads/${safePhoneKey}/selfie.jpg`;
+        }
+
+        db.clients[phone] = {
+            phone,
+            fullName,
+            email,
+            selfieUrl,
+            docFrontUrl,
+            docBackUrl,
+            status: 'pending_review',
+            registeredAt: new Date().toISOString()
+        };
+
+        saveDB(db);
+        res.json({ success: true, message: 'Cliente registrado con éxito en el servidor central.' });
     } catch (e) {
-        console.error("Error guardando archivos en disco:", e);
+        console.error('Error al registrar cliente:', e);
+        res.status(500).json({ success: false, message: 'Error interno guardando los datos del cliente.' });
     }
+});
 
-    const userData = {
-        fullName,
-        phone,
-        role,
-        selfieUrl: `/uploads/${safePhoneKey}/selfie.jpg`,
-        docFrontUrl: `/uploads/${safePhoneKey}/front.jpg`,
-        docBackUrl: `/uploads/${safePhoneKey}/back.jpg`,
-        status: 'pending_review',
-        registeredAt: new Date().toISOString()
-    };
-
-    fs.writeFileSync(path.join(userFolder, `info.json`), JSON.stringify(userData, null, 2));
-
-    const db = getDB();
-    if (role === 'driver') {
-        db.drivers[phone] = userData;
-    } else {
-        db.clients[phone] = userData;
-    }
-    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
-
-    res.json({ 
-        success: true, 
-        message: "¡Registro enviado con éxito! Tus documentos están en revisión por el equipo central. Pronto serás activado." 
-    });
+app.get('/admin-logout', (req, res) => {
+    res.setHeader('Set-Cookie', 'librex_session_role=; Max-Age=0; path=/;');
+    res.redirect('/');
 });
 
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.listen(PORT, () => {
-    console.log(`[LIBREX TRANSPORT] Servidor operando con Barra Admin Flotante en puerto ${PORT}`);
+    console.log(`[LIBREX MAIN SERVER] Servidor Principal Gateway en puerto ${PORT}`);
 });
