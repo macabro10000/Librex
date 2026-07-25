@@ -1,7 +1,7 @@
 {
   "name": "librex-multiplatform-system",
-  "version": "1.0.0",
-  "description": "Sistema multiplataforma de movilidad y servicios Librex",
+  "version": "1.1.0",
+  "description": "Sistema multiplataforma avanzado de movilidad, transporte y panel maestro Librex",
   "main": "server-main.js",
   "engines": {
     "node": ">=18.0.0"
@@ -10,10 +10,13 @@
     "start": "node server-main.js",
     "start:client": "node server-client.js",
     "start:driver": "node server-driver.js",
-    "start:admin": "node server-admin.js"
+    "start:admin": "node server-admin.js",
+    "dev": "node --watch server-main.js"
   },
   "dependencies": {
     "express": "^4.19.2",
+    "cookie-parser": "^1.4.6",
+    "compression": "^1.7.4",
     "nodemailer": "^6.9.13"
   }
 }
