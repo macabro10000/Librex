@@ -10,7 +10,6 @@ const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'librex-transport-db.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
-// Asegurar estructura de carpetas local
 if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
@@ -26,7 +25,6 @@ function getDB() {
     return data;
 }
 
-// Analizador de cookies robusto para sesión persistente
 function parseCookies(req) {
     const list = {};
     const cookieHeader = req.headers.cookie;
@@ -51,28 +49,66 @@ const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-7j4i.onrender.c
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'https://librex-ppna.onrender.com';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'https://librex-ppna.onrender.com';
 
-// 1. Interfaz Principal / Pantalla de Acceso con Redirección Inteligente por Sesión Activa
+// Generador de Barra Flotante Exclusiva para el Administrador
+function renderAdminFloatToolbar(currentContext) {
+    return `
+        <style>
+            #librex-admin-bar {
+                position: fixed;
+                bottom: 15px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(15, 23, 42, 0.95);
+                border: 2px solid #38bdf8;
+                padding: 8px 14px;
+                border-radius: 30px;
+                display: flex;
+                gap: 10px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+                z-index: 999999;
+                backdrop-filter: blur(6px);
+            }
+            #librex-admin-bar a {
+                color: #fff;
+                text-decoration: none;
+                font-size: 11px;
+                font-weight: bold;
+                padding: 6px 12px;
+                border-radius: 20px;
+                background: #1e293b;
+                border: 1px solid #475569;
+                transition: 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            #librex-admin-bar a:hover {
+                background: #0284c7;
+                border-color: #38bdf8;
+            }
+            #librex-admin-bar a.active {
+                background: #0369a1;
+                border-color: #38bdf8;
+            }
+        </style>
+        <div id="librex-admin-bar">
+            <a href="/" class="${currentContext === 'home' ? 'active' : ''}">🏠 Inicio</a>
+            <a href="${ADMIN_SERVICE_URL}/admin?key=librex2026&email=vitorinoarenas1000@gmail.com" class="${currentContext === 'admin' ? 'active' : ''}">⚙️ Panel</a>
+            <a href="${DRIVER_SERVICE_URL}" class="${currentContext === 'driver' ? 'active' : ''}">🚕 Conductor</a>
+            <a href="${USER_SERVICE_URL}" class="${currentContext === 'client' ? 'active' : ''}">👤 Pasajero</a>
+            <a href="/admin-logout" style="background: #991b1b; border-color: #dc2626;">🚪 Salir</a>
+        </div>
+    `;
+}
+
+// 1. Interfaz Principal
 app.get('/', (req, res) => {
     const cookies = parseCookies(req);
-    const savedPhone = cookies.librex_session_phone;
     const savedRole = cookies.librex_session_role;
     const savedEmail = cookies.librex_session_email;
+    const isAdmin = savedRole === 'admin' && savedEmail;
 
-    if (savedRole === 'admin' && savedEmail) {
-        const db = getDB();
-        if (db.admins.includes(savedEmail)) {
-            return res.redirect(`${ADMIN_SERVICE_URL}/admin?key=librex2026&email=${encodeURIComponent(savedEmail)}`);
-        }
-    }
-
-    if (savedPhone && savedRole && savedRole !== 'admin') {
-        const db = getDB();
-        const user = savedRole === 'driver' ? db.drivers[savedPhone] : db.clients[savedPhone];
-        if (user) {
-            const targetUrl = savedRole === 'driver' ? DRIVER_SERVICE_URL : USER_SERVICE_URL;
-            return res.redirect(`${targetUrl}/?phone=${encodeURIComponent(savedPhone)}&name=${encodeURIComponent(user.fullName)}&picture=${encodeURIComponent(user.selfieUrl)}`);
-        }
-    }
+    let adminBarHtml = isAdmin ? renderAdminFloatToolbar('home') : '';
 
     res.send(`
         <!DOCTYPE html>
@@ -80,7 +116,7 @@ app.get('/', (req, res) => {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <title>Librex Transport - Registro Profesional</title>
+            <title>Librex Transport - Acceso Maestro</title>
             <style>
                 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
                 body { background: #07090e; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
@@ -89,13 +125,11 @@ app.get('/', (req, res) => {
                 .header { text-align: center; margin-top: 10px; }
                 .header h1 { font-size: 26px; color: #10b981; font-weight: 900; letter-spacing: 1px; }
                 .header p { font-size: 11px; color: #94a3b8; margin-top: 4px; }
-                
                 .menu-zones { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
                 .zone-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
                 .zone-icon { font-size: 20px; background: #334155; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
                 .zone-info h3 { font-size: 12px; font-weight: 700; color: #f8fafc; }
                 .zone-info p { font-size: 9px; color: #94a3b8; }
-
                 .form-box { background: #1e293b; padding: 12px; border-radius: 14px; border: 1px solid #334155; }
                 .form-box label { font-size: 10px; color: #cbd5e1; display: block; margin-bottom: 2px; font-weight: 600; }
                 .form-box input, .form-box select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #475569; background: #020617; color: white; font-size: 12px; margin-bottom: 6px; }
@@ -113,7 +147,6 @@ app.get('/', (req, res) => {
                     <h1>LIBREX RIDE 🚗</h1>
                     <p>Movilidad Profesional Verificada</p>
                 </div>
-                
                 <div class="menu-zones">
                     <div class="zone-card" id="card-client" onclick="switchRole('client')" style="border-color: #059669;">
                         <div class="zone-icon">👤</div>
@@ -122,7 +155,6 @@ app.get('/', (req, res) => {
                             <p>Solicita viajes de forma segura</p>
                         </div>
                     </div>
-
                     <div class="zone-card" id="card-driver" onclick="switchRole('driver')" style="border-color: #334155;">
                         <div class="zone-icon" style="background: #065f46;">🚕</div>
                         <div class="zone-info">
@@ -130,7 +162,6 @@ app.get('/', (req, res) => {
                             <p>Maneja y genera ganancias diarias</p>
                         </div>
                     </div>
-
                     <div class="zone-card" id="card-admin" onclick="switchRole('admin')" style="border-color: #334155;">
                         <div class="zone-icon" style="background: #1e3a8a;">⚙️</div>
                         <div class="zone-info">
@@ -138,13 +169,11 @@ app.get('/', (req, res) => {
                             <p>Revisión y activación de flota</p>
                         </div>
                     </div>
-
                     <div class="form-box" id="dynamic-form"></div>
                 </div>
-
                 <div class="footer-note">Librex Secure Platform v9.0</div>
             </div>
-
+            ${adminBarHtml}
             <script>
                 let currentRole = 'client';
                 renderForm('client');
@@ -175,10 +204,8 @@ app.get('/', (req, res) => {
 
                         container.innerHTML = \`
                             <p style="font-size: 11px; color: #34d399; margin-bottom: 6px; font-weight: bold;">\${title}</p>
-                            
                             <label>Nombre y Apellido:</label>
                             <input type="text" id="user-name" placeholder="Ej. Carlos Alberto Pérez">
-                            
                             <label>Selecciona tu País y Teléfono:</label>
                             <div class="phone-group">
                                 <select id="country-code">
@@ -192,22 +219,18 @@ app.get('/', (req, res) => {
                                 </select>
                                 <input type="tel" id="user-phone" placeholder="3001234567">
                             </div>
-
                             <div class="file-upload-group">
                                 <label>1. Fotografía de tu Rostro (Selfie):</label>
                                 <input type="file" id="file-selfie" accept="image/*" capture="user">
                             </div>
-
                             <div class="file-upload-group">
                                 <label>2. \${doc1}:</label>
                                 <input type="file" id="file-doc-front" accept="image/*">
                             </div>
-
                             <div class="file-upload-group">
                                 <label>3. \${doc2}:</label>
                                 <input type="file" id="file-doc-back" accept="image/*">
                             </div>
-
                             <button onclick="registrarUsuario('\${role}')">Enviar Solicitud de Registro 🚀</button>
                         \`;
                     }
@@ -259,7 +282,6 @@ app.get('/', (req, res) => {
                             r3.readAsDataURL(backInput.files[0]);
                             r3.onload = function(e3) {
                                 const backDoc = e3.target.result;
-
                                 fetch('/auth-user-direct', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -284,7 +306,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Autenticación Administrador Maestro con Persistencia y Enlace en Tiempo Real
+// 2. Autenticación de Administrador Maestro y Activación de Cookie Persistente
 app.post('/auth-admin', (req, res) => {
     const { email, password } = req.body;
     if (email === 'vitorinoarenas1000@gmail.com' && password === '94550Mic@') {
@@ -304,10 +326,17 @@ app.post('/auth-admin', (req, res) => {
     }
 });
 
-// 3. Registro Directo con Creación de Carpeta Inalterable para Revisión de Documentos
+// 3. Ruta para cerrar sesión de Administrador y limpiar cookies
+app.get('/admin-logout', (req, res) => {
+    res.setHeader('Set-Cookie', [
+        `librex_session_email=; Path=/; Max-Age=0; HttpOnly`,
+        `librex_session_role=; Path=/; Max-Age=0; HttpOnly`
+    ]);
+    res.redirect('/');
+});
+
 app.post('/auth-user-direct', (req, res) => {
     const { fullName, phone, role, selfie, frontDoc, backDoc } = req.body;
-    
     const safePhoneKey = phone.replace(/[^a-zA-Z0-9]/g, '_');
     const userFolder = path.join(UPLOADS_DIR, safePhoneKey);
     if (!fs.existsSync(userFolder)) {
@@ -319,7 +348,6 @@ app.post('/auth-user-direct', (req, res) => {
         const frontBuffer = Buffer.from(frontDoc.split(',')[1], 'base64');
         const backBuffer = Buffer.from(backDoc.split(',')[1], 'base64');
 
-        // Guardado físico de archivos multimedia en el servidor
         fs.writeFileSync(path.join(userFolder, `selfie.jpg`), selfieBuffer);
         fs.writeFileSync(path.join(userFolder, `front.jpg`), frontBuffer);
         fs.writeFileSync(path.join(userFolder, `back.jpg`), backBuffer);
@@ -338,10 +366,8 @@ app.post('/auth-user-direct', (req, res) => {
         registeredAt: new Date().toISOString()
     };
 
-    // Archivo info.json con los datos completos del usuario
     fs.writeFileSync(path.join(userFolder, `info.json`), JSON.stringify(userData, null, 2));
 
-    // Guardar en la base de datos global
     const db = getDB();
     if (role === 'driver') {
         db.drivers[phone] = userData;
@@ -356,9 +382,8 @@ app.post('/auth-user-direct', (req, res) => {
     });
 });
 
-// Exponer archivos estáticos para que puedas ver las fotos en tu panel de administración
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.listen(PORT, () => {
-    console.log(`[LIBREX TRANSPORT] Servidor operando sin pagos ni códigos en puerto ${PORT}`);
+    console.log(`[LIBREX TRANSPORT] Servidor operando con Barra Admin Flotante en puerto ${PORT}`);
 });
