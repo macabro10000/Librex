@@ -1,6 +1,6 @@
 const express = require('express');
 const fs = require('fs');
-const path = path = require('path');
+const path = require('path');
 
 const app = express();
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
