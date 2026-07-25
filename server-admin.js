@@ -6,7 +6,11 @@ const app = express();
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 
-const PORT = process.env.ADMIN_PORT || 3003;
+const PORT = process.env.PORT || process.env.ADMIN_PORT || 3003;
+
+// ⚠️ IMPORTANTE: Si tus servicios están separados en Render, 
+// se recomienda usar una ruta unificada o volumen persistente, 
+// o unificar este código en el mismo servidor principal.
 const DB_FILE = path.join(__dirname, 'librex-transport-db.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
@@ -22,8 +26,8 @@ function getDB() {
     }
     try {
         const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-        if (!data.clients) data.clients = {};
-        if (!data.drivers) data.drivers = {};
+        if (!data.clients || Array.isArray(data.clients)) data.clients = {};
+        if (!data.drivers || Array.isArray(data.drivers)) data.drivers = {};
         if (!data.admins) data.admins = [];
         return data;
     } catch (e) {
@@ -48,6 +52,9 @@ function deleteFolderRecursive(directoryPath) {
         fs.rmdirSync(directoryPath);
     }
 }
+
+// Servir archivos estáticos de las fotos y documentos
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Interfaz Gráfica del Panel Maestro
 app.get('/admin', (req, res) => {
@@ -165,7 +172,7 @@ app.get('/admin', (req, res) => {
             <div class="top-header">
                 <div>
                     <h1>⚙️ PANEL MAESTRO</h1>
-                    <p class="sub">Administrador: ${email}</p>
+                    <p class="sub">Administrador: ${email || 'Principal'}</p>
                 </div>
             </div>
 
@@ -304,8 +311,6 @@ app.post('/admin/delete-user', (req, res) => {
 
     res.json({ success: true });
 });
-
-app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.listen(PORT, () => {
     console.log(`[LIBREX MASTER ADMIN] Servidor operando en puerto ${PORT}`);
