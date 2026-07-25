@@ -16,8 +16,8 @@ function getDB() {
     return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
 }
 
-// Configura aquí o en las variables de entorno de Render la URL real de tu servidor de clientes
-const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-client.onrender.com';
+// URL oficial de tu microservicio de clientes en Render
+const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-7j4i.onrender.com';
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'http://localhost:3002';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'http://localhost:3003';
 
@@ -80,7 +80,7 @@ app.get('/', (req, res) => {
                     </div>
                 </div>
 
-                <div class="footer-note">Librex Security Gateway v3.0</div>
+                <div class="footer-note">Librex Gateway v3.1</div>
             </div>
 
             <script>
@@ -109,7 +109,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Autenticación y registro de base de datos
+// 2. Autenticación, registro y empaquetado de datos de perfil hacia el microservicio
 app.post('/auth', (req, res) => {
     const { email, role } = req.body;
     if (!email || !email.includes('@')) {
@@ -146,7 +146,7 @@ app.post('/auth', (req, res) => {
     res.json({ success: true, redirectUrl: redirectUrl });
 });
 
-// 3. API de verificación cruzada para que el microservicio de clientes confirme sesiones
+// 3. API de verificación cruzada para validar sesiones activas
 app.get('/api/verify-session', (req, res) => {
     const { email } = req.query;
     const db = getDB();
