@@ -49,7 +49,6 @@ app.post('/api/admin/sync-client', (req, res) => {
     }
 
     let clients = leerJSON(CLIENTS_FILE);
-    // Verificar si ya existe para actualizar o agregar
     const index = clients.findIndex(c => c.phone === nuevoCliente.phone);
     if (index !== -1) {
         clients[index] = { ...clients[index], ...nuevoCliente, lastActivity: new Date().toISOString() };
@@ -59,6 +58,27 @@ app.post('/api/admin/sync-client', (req, res) => {
 
     escribirJSON(CLIENTS_FILE, clients);
     return res.json({ success: true, message: 'Cliente sincronizado correctamente en el Admin.' });
+});
+
+// ==========================================
+// ENDPOINT DE SINCRONIZACIÓN (Recibe datos de Conductores) - NUEVO/CORREGIDO
+// ==========================================
+app.post('/api/admin/sync-driver', (req, res) => {
+    const nuevoConductor = req.body;
+    if (!nuevoConductor.id || !nuevoConductor.phone) {
+        return res.status(400).json({ success: false, message: 'Datos de conductor incompletos.' });
+    }
+
+    let drivers = leerJSON(DRIVERS_FILE);
+    const index = drivers.findIndex(d => d.phone === nuevoConductor.phone);
+    if (index !== -1) {
+        drivers[index] = { ...drivers[index], ...nuevoConductor, lastActivity: new Date().toISOString() };
+    } else {
+        drivers.push({ ...nuevoConductor, balance: 0, lastActivity: new Date().toISOString() });
+    }
+
+    escribirJSON(DRIVERS_FILE, drivers);
+    return res.json({ success: true, message: 'Conductor sincronizado correctamente en el Admin.' });
 });
 
 // ==========================================
