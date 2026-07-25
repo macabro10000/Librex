@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -33,7 +34,16 @@ function getCodesDB() {
     return JSON.parse(fs.readFileSync(CODES_FILE, 'utf8'));
 }
 
-// Lector nativo de cookies (Evita requerir módulos externos como cookie-parser)
+// Configuración del transporter de Nodemailer para envío real
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER || 'vitorinoarenas1000@gmail.com', // Coloca tu correo o variable de entorno
+        pass: process.env.EMAIL_PASS || 'TU_CONTRASENA_DE_APLICACION'   // Coloca tu contraseña de aplicación de Gmail
+    }
+});
+
+// Lector nativo de cookies
 function parseCookies(req) {
     const list = {};
     const cookieHeader = req.headers.cookie;
@@ -295,19 +305,46 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Generar y enviar código de validación de correo
-app.post('/api/send-code', (req, res) => {
+// 2. Generar y Enviar Código Real al Correo mediante Nodemailer
+app.post('/api/send-code', async (req, res) => {
     const { email } = req.body;
     if (!email || !email.includes('@')) {
         return res.json({ success: false, message: "Correo inválido." });
     }
+
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     const codesDB = getCodesDB();
     codesDB[email] = verificationCode;
     fs.writeFileSync(CODES_FILE, JSON.stringify(codesDB, null, 2));
 
-    console.log(`[CÓDIGO DE VERIFICACIÓN PARA ${email}]: ${verificationCode}`);
-    res.json({ success: true, message: `Código enviado a ${email}. (Para pruebas locales mira la consola del servidor: ${verificationCode})` });
+    const mailOptions = {
+        from: '"Librex Support" <no-reply@librex.com>',
+        to: email,
+        subject: 'Código de Verificación - Librex 🚖',
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; background: #f3f4f6; border-radius: 10px;">
+                <h2 style="color: #0284c7;">Bienvenido a Librex 🚖</h2>
+                <p>Tu código de verificación para continuar con el registro es:</p>
+                <div style="background: #ffffff; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; color: #111827; border-radius: 6px; letter-spacing: 4px; margin: 15px 0;">
+                    ${verificationCode}
+                </div>
+                <p style="font-size: 12px; color: #6b7280;">Si no solicitaste este código, puedes ignorar este mensaje.</p>
+            </div>
+        `
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`[CORREO ENVIADO] Código ${verificationCode} enviado exitosamente a ${email}`);
+        res.json({ success: true, message: `Código de verificación enviado correctamente a ${email}. Revisa tu bandeja de entrada o spam.` });
+    } catch (error) {
+        console.error("Error al enviar el correo:", error);
+        // Fallback para desarrollo local si falla el servicio SMTP de correo
+        res.json({ 
+            success: true, 
+            message: `Código generado (Modo local de respaldo): ${verificationCode}. (Revisa tu consola si el correo demoró)` 
+        });
+    }
 });
 
 // 3. Autenticación de Administrador
@@ -398,5 +435,5 @@ app.get('/api/user-profile', (req, res) => {
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.listen(PORT, () => {
-    console.log(`[SERVER-MAIN] Servidor principal seguro optimizado sin dependencias externas en puerto ${PORT}`);
+    console.log(`[SERVER-MAIN] Servidor principal con envío de correos real activo en puerto ${PORT}`);
 });
