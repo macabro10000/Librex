@@ -4,6 +4,7 @@ const compression = require('compression');
 const path = require('path');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -14,10 +15,9 @@ app.use(cookieParser());
 app.use(compression());
 
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
-const fs = require('fs');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-// Hacer pública la carpeta de imágenes para que los links funcionen
+// Hacer pública la carpeta de imágenes
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 // ==========================================
@@ -66,7 +66,6 @@ const Client = mongoose.model('Client', clientSchema);
 const Driver = mongoose.model('Driver', driverSchema);
 const Settings = mongoose.model('Settings', settingsSchema);
 
-// Inicializar configuración por defecto y contraseña admin hasheada si no existe
 async function inicializarConfiguracion() {
     try {
         let settings = await Settings.findOne({ key: 'main_settings' });
@@ -223,11 +222,13 @@ app.get('/login', (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Librex - Admin Login</title>
             <style>
-                body { background: #030712; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-                .card { background: #0f172a; padding: 35px; border-radius: 20px; border: 1px solid #1e293b; width: 100%; max-width: 380px; text-align: center; }
-                h2 { color: #38bdf8; margin-bottom: 20px; }
-                input { width: 100%; padding: 14px; margin: 12px 0; background: #1e293b; border: 1px solid #334155; color: #fff; border-radius: 10px; box-sizing: border-box; }
-                button { width: 100%; padding: 14px; background: #0284c7; color: #fff; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+                body { background: radial-gradient(circle at center, #1e1b4b 0%, #09090b 100%); color: #cbd5e1; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+                .card { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); padding: 40px; border-radius: 24px; border: 1px solid rgba(139, 92, 246, 0.3); width: 100%; max-width: 380px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+                h2 { color: #c084fc; margin-bottom: 25px; font-weight: 700; letter-spacing: 0.5px; }
+                input { width: 100%; padding: 14px; margin: 12px 0; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); color: #f1f5f9; border-radius: 12px; box-sizing: border-box; outline: none; transition: border-color 0.3s; }
+                input:focus { border-color: #a855f7; box-shadow: 0 0 10px rgba(168, 85, 247, 0.2); }
+                button { width: 100%; padding: 14px; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #fff; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: opacity 0.3s, transform 0.2s; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4); }
+                button:hover { opacity: 0.9; transform: translateY(-1px); }
             </style>
         </head>
         <body>
@@ -264,7 +265,7 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
 });
 
-// Panel de Control Principal
+// Panel de Control Principal con diseño Violeta, Azul y Plateado
 app.get('/', verificarAdmin, async (req, res) => {
     try {
         const clients = await Client.find({});
@@ -278,33 +279,42 @@ app.get('/', verificarAdmin, async (req, res) => {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Librex - Panel Maestro Admin</title>
                 <style>
-                    * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-                    body { background: #030712; color: #f8fafc; padding: 20px; }
-                    .container { max-width: 1300px; margin: 0 auto; }
-                    header { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 20px; border-radius: 16px; border: 1px solid #1e293b; margin-bottom: 20px; }
-                    h1 { color: #38bdf8; font-size: 20px; }
-                    .btn-logout { background: #ef4444; color: #fff; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: bold; }
-                    .section { background: #0f172a; padding: 20px; border-radius: 16px; border: 1px solid #1e293b; margin-bottom: 25px; }
-                    .section h2 { color: #38bdf8; font-size: 17px; margin-bottom: 15px; }
+                    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+                    body { background: #090a0f; color: #e2e8f0; padding: 20px; background-image: radial-gradient(at 0% 0%, rgba(88, 28, 135, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(30, 58, 138, 0.15) 0px, transparent 50%); min-height: 100vh; }
+                    .container { max-width: 1350px; margin: 0 auto; }
+                    header { display: flex; justify-content: space-between; align-items: center; background: rgba(18, 18, 28, 0.85); backdrop-filter: blur(10px); padding: 22px 28px; border-radius: 16px; border: 1px solid rgba(148, 163, 184, 0.15); margin-bottom: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+                    h1 { color: #f8fafc; font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+                    h1::before { content: ''; display: inline-block; width: 10px; height: 10px; background: #a855f7; border-radius: 50%; box-shadow: 0 0 10px #a855f7; }
+                    .btn-logout { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: bold; transition: all 0.2s; }
+                    .btn-logout:hover { background: #ef4444; color: #fff; }
+                    .section { background: rgba(18, 18, 28, 0.8); backdrop-filter: blur(10px); padding: 24px; border-radius: 16px; border: 1px solid rgba(148, 163, 184, 0.12); margin-bottom: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
+                    .section h2 { color: #c084fc; font-size: 18px; margin-bottom: 18px; font-weight: 600; border-bottom: 1px solid rgba(148, 163, 184, 0.1); padding-bottom: 10px; }
                     table { width: 100%; border-collapse: collapse; }
-                    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1e293b; font-size: 13px; vertical-align: middle; }
-                    th { color: #64748b; font-weight: 600; }
-                    .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; }
-                    .badge-active { background: #065f46; color: #34d399; }
-                    .badge-suspended { background: #7f1d1d; color: #f87171; }
-                    .btn { padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; border: none; cursor: pointer; margin-right: 3px; margin-top: 3px; }
-                    .btn-edit { background: #0284c7; color: #fff; }
-                    .btn-gift { background: #10b981; color: #fff; }
-                    .btn-suspend { background: #d97706; color: #fff; }
-                    .btn-activate { background: #059669; color: #fff; }
-                    .btn-del { background: #ef4444; color: #fff; }
-                    .photo-link { color: #38bdf8; text-decoration: underline; font-weight: bold; cursor: pointer; margin-right: 6px; display: inline-block; }
+                    th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid rgba(148, 163, 184, 0.1); font-size: 13px; vertical-align: middle; }
+                    th { color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+                    .badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; }
+                    .badge-active { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+                    .badge-suspended { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+                    .btn { padding: 7px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; border: none; cursor: pointer; margin-right: 4px; margin-top: 4px; transition: all 0.2s; }
+                    .btn-edit { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+                    .btn-edit:hover { background: #38bdf8; color: #090a0f; }
+                    .btn-gift { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+                    .btn-gift:hover { background: #a855f7; color: #fff; }
+                    .btn-suspend { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+                    .btn-suspend:hover { background: #f59e0b; color: #090a0f; }
+                    .btn-activate { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+                    .btn-activate:hover { background: #10b981; color: #fff; }
+                    .btn-del { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+                    .btn-del:hover { background: #ef4444; color: #fff; }
+                    .photo-link { color: #38bdf8; text-decoration: none; font-weight: 600; cursor: pointer; margin-right: 8px; display: inline-block; padding: 3px 8px; background: rgba(56, 189, 248, 0.1); border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.2); transition: background 0.2s; }
+                    .photo-link:hover { background: rgba(56, 189, 248, 0.25); }
+                    .sub-text { color: #94a3b8; font-size: 11px; }
                 </style>
             </head>
             <body>
                 <div class="container">
                     <header>
-                        <h1>Librex - Panel Maestro en Tiempo Real (MongoDB)</h1>
+                        <h1>Librex &bull; Panel Maestro (MongoDB Atlas)</h1>
                         <a href="/logout" class="btn-logout">Cerrar Sesión</a>
                     </header>
 
@@ -315,7 +325,7 @@ app.get('/', verificarAdmin, async (req, res) => {
                             <tr>
                                 <th>Conductor</th>
                                 <th>Teléfono / Correo</th>
-                                <th>Documentos (Fotos)</th>
+                                <th>Documentos / Fotos</th>
                                 <th>Saldo</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
@@ -325,10 +335,10 @@ app.get('/', verificarAdmin, async (req, res) => {
                                 return `
                                     <tr>
                                         <td><strong>${d.fullName}</strong></td>
-                                        <td>${d.phone}<br><span style="color:#64748b;">${d.email || 'N/A'}</span></td>
+                                        <td>${d.phone}<br><span class="sub-text">${d.email || 'N/A'}</span></td>
                                         <td>
-                                            ${d.selfieUrl ? `<a href="${d.selfieUrl}" target="_blank" class="photo-link">📷 Rostro</a>` : '<span style="color:#64748b;">Sin foto</span>'}
-                                            ${d.docFrontUrl ? `<a href="${d.docFrontUrl}" target="_blank" class="photo-link" style="color:#34d399;">🪪 Documento</a>` : ''}
+                                            ${d.selfieUrl ? `<a href="${d.selfieUrl}" target="_blank" class="photo-link">📷 Rostro</a>` : '<span class="sub-text">Sin foto</span>'}
+                                            ${d.docFrontUrl ? `<a href="${d.docFrontUrl}" target="_blank" class="photo-link" style="color:#c084fc; background:rgba(168,85,247,0.1); border-color:rgba(168,85,247,0.2);">🪪 Documento</a>` : ''}
                                         </td>
                                         <td><strong>$${d.balance || 0}</strong></td>
                                         <td>
@@ -340,12 +350,12 @@ app.get('/', verificarAdmin, async (req, res) => {
                                                 `<button class="btn btn-activate" onclick="cambiarEstado('${d.id}', 'driver', 'Activo')">✅ Activar</button>` : 
                                                 `<button class="btn btn-suspend" onclick="cambiarEstado('${d.id}', 'driver', 'Suspendido')">🚫 Suspender</button>`
                                             }
-                                            <button class="btn btn-edit" onclick="editarUsuario('${d.id}', 'driver', '${d.fullName}', '${d.phone}')">✏️</button>
-                                            <button class="btn btn-del" onclick="eliminarUsuario('${d.id}', 'driver')">🗑️</button>
+                                            <button class="btn btn-edit" onclick="editarUsuario('${d.id}', 'driver', '${d.fullName}', '${d.phone}')">✏️ Editar</button>
+                                            <button class="btn btn-del" onclick="eliminarUsuario('${d.id}', 'driver')">🗑️ Eliminar</button>
                                         </td>
                                     </tr>
                                 `;
-                            }).join('') || '<tr><td colspan="6" style="text-align:center; color:#64748b;">No hay conductores registrados.</td></tr>'}
+                            }).join('') || '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No hay conductores registrados.</td></tr>'}
                         </table>
                     </div>
 
@@ -366,10 +376,10 @@ app.get('/', verificarAdmin, async (req, res) => {
                                 return `
                                     <tr>
                                         <td><strong>${c.fullName}</strong></td>
-                                        <td>${c.phone}<br><span style="color:#64748b;">${c.email || 'N/A'}</span></td>
+                                        <td>${c.phone}<br><span class="sub-text">${c.email || 'N/A'}</span></td>
                                         <td>
-                                            ${c.docFrontUrl ? `<a href="${c.docFrontUrl}" target="_blank" class="photo-link" style="color:#38bdf8;">🪪 Frente</a>` : ''}
-                                            ${c.docBackUrl ? `<a href="${c.docBackUrl}" target="_blank" class="photo-link" style="color:#34d399;">🪪 Dorso</a>` : '<span style="color:#64748b;">Sin docs</span>'}
+                                            ${c.docFrontUrl ? `<a href="${c.docFrontUrl}" target="_blank" class="photo-link">🪪 Frente</a>` : ''}
+                                            ${c.docBackUrl ? `<a href="${c.docBackUrl}" target="_blank" class="photo-link" style="color:#c084fc; background:rgba(168,85,247,0.1); border-color:rgba(168,85,247,0.2);">🪪 Dorso</a>` : '<span class="sub-text">Sin docs</span>'}
                                         </td>
                                         <td><strong>$${c.balance || 0}</strong></td>
                                         <td>
@@ -381,12 +391,12 @@ app.get('/', verificarAdmin, async (req, res) => {
                                                 `<button class="btn btn-activate" onclick="cambiarEstado('${c.id}', 'client', 'Activo')">✅ Activar</button>` : 
                                                 `<button class="btn btn-suspend" onclick="cambiarEstado('${c.id}', 'client', 'Suspendido')">🚫 Suspender</button>`
                                             }
-                                            <button class="btn btn-edit" onclick="editarUsuario('${c.id}', 'client', '${c.fullName}', '${c.phone}')">✏️</button>
-                                            <button class="btn btn-del" onclick="eliminarUsuario('${c.id}', 'client')">🗑️</button>
+                                            <button class="btn btn-edit" onclick="editarUsuario('${c.id}', 'client', '${c.fullName}', '${c.phone}')">✏️ Editar</button>
+                                            <button class="btn btn-del" onclick="eliminarUsuario('${c.id}', 'client')">🗑️ Eliminar</button>
                                         </td>
                                     </tr>
                                 `;
-                            }).join('') || '<tr><td colspan="6" style="text-align:center; color:#64748b;">No hay pasajeros registrados.</td></tr>'}
+                            }).join('') || '<tr><td colspan="6" style="text-align:center; color:#94a3b8;">No hay pasajeros registrados.</td></tr>'}
                         </table>
                     </div>
                 </div>
