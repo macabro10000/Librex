@@ -1,12 +1,10 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const cookieParser = require('cookie-parser');
 
 const app = express();
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
-app.use(cookieParser());
 
 const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'registered-emails-db.json');
@@ -35,21 +33,41 @@ function getCodesDB() {
     return JSON.parse(fs.readFileSync(CODES_FILE, 'utf8'));
 }
 
+// Lector nativo de cookies (Evita requerir módulos externos como cookie-parser)
+function parseCookies(req) {
+    const list = {};
+    const cookieHeader = req.headers.cookie;
+    if (!cookieHeader) return list;
+
+    cookieHeader.split(`;`).forEach(cookie => {
+        let [name, ...rest] = cookie.split(`=`);
+        name = name?.trim();
+        if (!name) return;
+        let value = rest.join(`=`).trim();
+        if (/^"/.test(value)) value = value.slice(1, -1);
+        try {
+            list[name] = decodeURIComponent(value);
+        } catch (e) {
+            list[name] = value;
+        }
+    });
+    return list;
+}
+
 const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-7j4i.onrender.com';
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'http://localhost:3002';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'http://localhost:3003';
 
-// 1. Pantalla principal con Auto-Login, Doble Cédula y Validación de Correo
+// 1. Pantalla principal con Auto-Login nativo, Doble Cédula y Validación de Correo
 app.get('/', (req, res) => {
-    // Verificar si ya existe una sesión guardada por cookie
-    const savedEmail = req.cookies.librex_session_email;
-    const savedRole = req.cookies.librex_session_role;
+    const cookies = parseCookies(req);
+    const savedEmail = cookies.librex_session_email;
+    const savedRole = cookies.librex_session_role;
 
     if (savedEmail && savedRole) {
         const db = getDB();
         const user = savedRole === 'driver' ? db.drivers[savedEmail] : db.clients[savedEmail];
         if (user) {
-            // Auto-redirección directa al perfil si ya está logueado
             const targetUrl = savedRole === 'driver' ? DRIVER_SERVICE_URL : USER_SERVICE_URL;
             return res.redirect(`${targetUrl}/?email=${encodeURIComponent(savedEmail)}&name=${encodeURIComponent(user.fullName)}&picture=${encodeURIComponent(user.selfieUrl)}`);
         }
@@ -122,7 +140,7 @@ app.get('/', (req, res) => {
                     <div class="form-box" id="dynamic-form"></div>
                 </div>
 
-                <div class="footer-note">Librex Secure Persistent v6.0</div>
+                <div class="footer-note">Librex Secure Persistent v6.1</div>
             </div>
 
             <script>
@@ -241,7 +259,6 @@ app.get('/', (req, res) => {
                         return;
                     }
 
-                    // Convertir archivos a Base64 secuencialmente
                     const reader = new FileReader();
                     reader.readAsDataURL(selfieInput.files[0]);
                     reader.onload = function(e1) {
@@ -278,7 +295,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Generar y enviar código de validación de correo simulado/real
+// 2. Generar y enviar código de validación de correo
 app.post('/api/send-code', (req, res) => {
     const { email } = req.body;
     if (!email || !email.includes('@')) {
@@ -289,7 +306,6 @@ app.post('/api/send-code', (req, res) => {
     codesDB[email] = verificationCode;
     fs.writeFileSync(CODES_FILE, JSON.stringify(codesDB, null, 2));
 
-    // Nota: Aquí se simula el envío o se puede conectar vía nodemailer. Para pruebas locales muestra el código en consola.
     console.log(`[CÓDIGO DE VERIFICACIÓN PARA ${email}]: ${verificationCode}`);
     res.json({ success: true, message: `Código enviado a ${email}. (Para pruebas locales mira la consola del servidor: ${verificationCode})` });
 });
@@ -302,8 +318,10 @@ app.post('/auth-admin', (req, res) => {
         if (!db.admins.includes(email)) db.admins.push(email);
         fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-        res.cookie('librex_session_email', email, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
-        res.cookie('librex_session_role', 'admin', { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+        res.setHeader('Set-Cookie', [
+            `librex_session_email=${encodeURIComponent(email)}; Path=/; Max-Age=${30 * 24 * 60 * 60}; HttpOnly; SameSite=Lax`,
+            `librex_session_role=admin; Path=/; Max-Age=${30 * 24 * 60 * 60}; HttpOnly; SameSite=Lax`
+        ]);
 
         const redirectUrl = `${ADMIN_SERVICE_URL}/admin?key=librex2026&email=${encodeURIComponent(email)}`;
         return res.json({ success: true, redirectUrl });
@@ -316,7 +334,6 @@ app.post('/auth-admin', (req, res) => {
 app.post('/auth-user-media-dual', (req, res) => {
     const { fullName, email, code, role, selfie, frontDoc, backDoc } = req.body;
     
-    // Verificar código de correo
     const codesDB = getCodesDB();
     if (!codesDB[email] || codesDB[email] !== code) {
         return res.json({ success: false, message: "El código de verificación del correo es incorrecto o expiró." });
@@ -354,9 +371,10 @@ app.post('/auth-user-media-dual', (req, res) => {
     }
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-    // Fijar Cookies de Autenticación Permanente para evitar nuevos registros
-    res.cookie('librex_session_email', email, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
-    res.cookie('librex_session_role', role, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+    res.setHeader('Set-Cookie', [
+        `librex_session_email=${encodeURIComponent(email)}; Path=/; Max-Age=${30 * 24 * 60 * 60}; HttpOnly; SameSite=Lax`,
+        `librex_session_role=${role}; Path=/; Max-Age=${30 * 24 * 60 * 60}; HttpOnly; SameSite=Lax`
+    ]);
 
     const protocol = req.protocol;
     const host = req.get('host');
@@ -380,5 +398,5 @@ app.get('/api/user-profile', (req, res) => {
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.listen(PORT, () => {
-    console.log(`[SERVER-MAIN] Servidor principal seguro con doble cara y validación en puerto ${PORT}`);
+    console.log(`[SERVER-MAIN] Servidor principal seguro optimizado sin dependencias externas en puerto ${PORT}`);
 });
