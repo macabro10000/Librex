@@ -1,18 +1,16 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const nodemailer = require('nodemailer');
 
 const app = express();
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 
 const PORT = process.env.PORT || 3000;
-const DB_FILE = path.join(__dirname, 'registered-emails-db.json');
+const DB_FILE = path.join(__dirname, 'librex-transport-db.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
-const CODES_FILE = path.join(__dirname, 'verification-codes-db.json');
 
-// Asegurar directorios y bases de datos locales
+// Asegurar estructura de carpetas local
 if (!fs.existsSync(UPLOADS_DIR)) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
@@ -27,31 +25,7 @@ function getDB() {
     return data;
 }
 
-function getCodesDB() {
-    if (!fs.existsSync(CODES_FILE)) {
-        fs.writeFileSync(CODES_FILE, JSON.stringify({}, null, 2));
-    }
-    return JSON.parse(fs.readFileSync(CODES_FILE, 'utf8'));
-}
-
-// Configuración SMTP con sockets reutilizables para máxima velocidad
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    pool: true, // Mantiene conexiones abiertas para que el envío sea inmediato
-    maxConnections: 5,
-    maxMessages: 100,
-    auth: {
-        user: process.env.EMAIL_USER || 'vitorinoarenas1000@gmail.com',
-        pass: process.env.EMAIL_PASS || 'prjbgvrcewtjbspk'
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-});
-
-// Lector nativo robusto de cookies para manejo de sesiones
+// Analizador de cookies robusto para sesión persistente
 function parseCookies(req) {
     const list = {};
     const cookieHeader = req.headers.cookie;
@@ -76,18 +50,18 @@ const USER_SERVICE_URL = process.env.USER_URL || 'https://librex-7j4i.onrender.c
 const DRIVER_SERVICE_URL = process.env.DRIVER_URL || 'http://localhost:3002';
 const ADMIN_SERVICE_URL = process.env.ADMIN_URL || 'http://localhost:3003';
 
-// 1. Pantalla principal con Flujo Corrección Dinámica: El campo de código aparece de inmediato para evitar demoras
+// 1. Interfaz Principal / Pantalla de Acceso Estilo App Profesional (Selector de País + Registro Limpio)
 app.get('/', (req, res) => {
     const cookies = parseCookies(req);
-    const savedEmail = cookies.librex_session_email;
+    const savedPhone = cookies.librex_session_phone;
     const savedRole = cookies.librex_session_role;
 
-    if (savedEmail && savedRole) {
+    if (savedPhone && savedRole) {
         const db = getDB();
-        const user = savedRole === 'driver' ? db.drivers[savedEmail] : db.clients[savedEmail];
+        const user = savedRole === 'driver' ? db.drivers[savedPhone] : db.clients[savedPhone];
         if (user) {
             const targetUrl = savedRole === 'driver' ? DRIVER_SERVICE_URL : USER_SERVICE_URL;
-            return res.redirect(`${targetUrl}/?email=${encodeURIComponent(savedEmail)}&name=${encodeURIComponent(user.fullName)}&picture=${encodeURIComponent(user.selfieUrl)}`);
+            return res.redirect(`${targetUrl}/?phone=${encodeURIComponent(savedPhone)}&name=${encodeURIComponent(user.fullName)}&picture=${encodeURIComponent(user.selfieUrl)}`);
         }
     }
 
@@ -97,68 +71,69 @@ app.get('/', (req, res) => {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <title>Librex - Registro Inteligente y Rápido</title>
+            <title>Librex Transport - Registro Profesional</title>
             <style>
                 * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-                body { background: #090d16; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-                .app-container { width: 100%; max-width: 420px; background: #111827; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-shadow: 0 0 25px rgba(0,0,0,0.5); }
-                @media(min-width: 430px) { .app-container { min-height: 880px; border-radius: 36px; border: 8px solid #1f2937; } }
+                body { background: #07090e; color: #ffffff; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+                .app-container { width: 100%; max-width: 420px; background: #0f172a; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
+                @media(min-width: 430px) { .app-container { min-height: 880px; border-radius: 36px; border: 8px solid #1e293b; } }
                 .header { text-align: center; margin-top: 10px; }
-                .header h1 { font-size: 24px; color: #38bdf8; font-weight: 800; letter-spacing: 1px; }
-                .header p { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+                .header h1 { font-size: 26px; color: #10b981; font-weight: 900; letter-spacing: 1px; }
+                .header p { font-size: 11px; color: #94a3b8; margin-top: 4px; }
                 
                 .menu-zones { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
-                .zone-card { background: #1f2937; border: 1px solid #374151; border-radius: 12px; padding: 10px; display: flex; align-items: center; gap: 10px; color: white; cursor: pointer; transition: 0.2s ease; }
-                .zone-icon { font-size: 20px; background: #374151; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
-                .zone-info h3 { font-size: 12px; font-weight: 700; color: #f3f4f6; }
-                .zone-info p { font-size: 9px; color: #9ca3af; }
+                .zone-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
+                .zone-icon { font-size: 20px; background: #334155; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+                .zone-info h3 { font-size: 12px; font-weight: 700; color: #f8fafc; }
+                .zone-info p { font-size: 9px; color: #94a3b8; }
 
-                .form-box { background: #1f2937; padding: 12px; border-radius: 12px; border: 1px solid #374151; }
-                .form-box label { font-size: 10px; color: #9ca3af; display: block; margin-bottom: 2px; }
-                .form-box input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #4b5563; background: #0b0f19; color: white; font-size: 12px; margin-bottom: 6px; }
-                .file-upload-group { margin-bottom: 6px; background: #0b0f19; padding: 6px; border-radius: 6px; border: 1px dashed #4b5563; }
-                .file-upload-group label { color: #38bdf8; font-weight: 600; font-size: 10px; }
-                .form-box button { width: 100%; padding: 10px; border-radius: 8px; background: #0284c7; color: white; border: none; font-weight: 700; font-size: 12px; cursor: pointer; margin-top: 4px; }
-                .secondary-btn { background: #374151 !important; margin-top: 4px; }
-                .footer-note { text-align: center; font-size: 9px; color: #4b5563; margin-bottom: 5px; }
+                .form-box { background: #1e293b; padding: 12px; border-radius: 14px; border: 1px solid #334155; }
+                .form-box label { font-size: 10px; color: #cbd5e1; display: block; margin-bottom: 2px; font-weight: 600; }
+                .form-box input, .form-box select { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #475569; background: #020617; color: white; font-size: 12px; margin-bottom: 6px; }
+                .phone-group { display: flex; gap: 6px; }
+                .phone-group select { width: 110px; }
+                .file-upload-group { margin-bottom: 6px; background: #020617; padding: 6px; border-radius: 8px; border: 1px dashed #475569; }
+                .file-upload-group label { color: #34d399; font-size: 9px; }
+                .form-box button { width: 100%; padding: 11px; border-radius: 10px; background: #059669; color: white; border: none; font-weight: 800; font-size: 12px; cursor: pointer; margin-top: 4px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); }
+                .footer-note { text-align: center; font-size: 9px; color: #64748b; margin-bottom: 4px; }
             </style>
         </head>
         <body>
             <div class="app-container">
                 <div class="header">
-                    <h1>LIBREX 🚖</h1>
-                    <p>Verificación Rápida y Segura</p>
+                    <h1>LIBREX RIDE 🚗</h1>
+                    <p>Movilidad Profesional Verificada</p>
                 </div>
                 
                 <div class="menu-zones">
-                    <div class="zone-card" id="card-client" onclick="switchRole('client')" style="border-color: #38bdf8;">
+                    <div class="zone-card" id="card-client" onclick="switchRole('client')" style="border-color: #059669;">
                         <div class="zone-icon">👤</div>
                         <div class="zone-info">
-                            <h3>Modo Cliente</h3>
-                            <p>Selfie + Cédula (Frente y Dorso)</p>
+                            <h3>Pasajero / Cliente</h3>
+                            <p>Solicita viajes de forma segura</p>
                         </div>
                     </div>
 
-                    <div class="zone-card" id="card-driver" onclick="switchRole('driver')" style="border-color: #374151;">
-                        <div class="zone-icon" style="background: #14532d;">🚗</div>
+                    <div class="zone-card" id="card-driver" onclick="switchRole('driver')" style="border-color: #334155;">
+                        <div class="zone-icon" style="background: #065f46;">🚕</div>
                         <div class="zone-info">
-                            <h3>Modo Conductor</h3>
-                            <p>Selfie + Licencia (Frente y Dorso)</p>
+                            <h3>Conductor Partner</h3>
+                            <p>Maneja y genera ganancias diarias</p>
                         </div>
                     </div>
 
-                    <div class="zone-card" id="card-admin" onclick="switchRole('admin')" style="border-color: #374151;">
-                        <div class="zone-icon" style="background: #1e40af;">🔐</div>
+                    <div class="zone-card" id="card-admin" onclick="switchRole('admin')" style="border-color: #334155;">
+                        <div class="zone-icon" style="background: #1e3a8a;">⚙️</div>
                         <div class="zone-info">
-                            <h3>Modo Administrador</h3>
-                            <p>Acceso exclusivo maestro</p>
+                            <h3>Panel Maestro</h3>
+                            <p>Revisión y activación de flota</p>
                         </div>
                     </div>
 
                     <div class="form-box" id="dynamic-form"></div>
                 </div>
 
-                <div class="footer-note">Librex Secure Persistent v6.3 - Fast SMTP</div>
+                <div class="footer-note">Librex Secure Platform v9.0</div>
             </div>
 
             <script>
@@ -167,9 +142,9 @@ app.get('/', (req, res) => {
 
                 function switchRole(role) {
                     currentRole = role;
-                    document.getElementById('card-client').style.borderColor = role === 'client' ? '#38bdf8' : '#374151';
-                    document.getElementById('card-driver').style.borderColor = role === 'driver' ? '#166534' : '#374151';
-                    document.getElementById('card-admin').style.borderColor = role === 'admin' ? '#1e3a8a' : '#374151';
+                    document.getElementById('card-client').style.borderColor = role === 'client' ? '#059669' : '#334155';
+                    document.getElementById('card-driver').style.borderColor = role === 'driver' ? '#047857' : '#334155';
+                    document.getElementById('card-admin').style.borderColor = role === 'admin' ? '#1d4ed8' : '#334155';
                     renderForm(role);
                 }
 
@@ -177,79 +152,56 @@ app.get('/', (req, res) => {
                     const container = document.getElementById('dynamic-form');
                     if (role === 'admin') {
                         container.innerHTML = \`
-                            <p style="font-size: 11px; color: #38bdf8; margin-bottom: 6px;">Panel de Administrador</p>
+                            <p style="font-size: 11px; color: #38bdf8; margin-bottom: 6px; font-weight: bold;">Acceso Panel Administrador</p>
                             <label>Correo Electrónico:</label>
                             <input type="email" id="adm-email" placeholder="vitorinoarenas1000@gmail.com">
                             <label>Contraseña:</label>
                             <input type="password" id="adm-pass" placeholder="••••••••••••">
-                            <button onclick="loginAdmin()">Ingresar como Admin 🔐</button>
+                            <button onclick="loginAdmin()">Ingresar al Panel 🔐</button>
                         \`;
                     } else {
-                        const title = role === 'client' ? 'Registro de Cliente' : 'Registro de Conductor';
-                        const color = role === 'client' ? '#38bdf8' : '#16a34a';
-                        const btnColor = role === 'client' ? '#0284c7' : '#166534';
-                        const docName = role === 'client' ? 'Cédula de Identidad' : 'Licencia de Conducción';
+                        const title = role === 'client' ? 'Registro de Pasajero' : 'Registro de Conductor';
+                        const doc1 = role === 'client' ? 'Cédula o Documento (Frente)' : 'Licencia de Conducción (Frente)';
+                        const doc2 = role === 'client' ? 'Cédula o Documento (Dorso)' : 'Tarjeta de Propiedad del Vehículo';
 
                         container.innerHTML = \`
-                            <p style="font-size: 11px; color: \${color}; margin-bottom: 4px;">\${title}</p>
-                            <label>Nombre Completo:</label>
-                            <input type="text" id="user-name" placeholder="Ej. Carlos Mario Pérez">
+                            <p style="font-size: 11px; color: #34d399; margin-bottom: 6px; font-weight: bold;">\${title}</p>
                             
-                            <label>Correo Electrónico:</label>
-                            <input type="email" id="user-email" placeholder="tucorreo@gmail.com">
-                            <button type="button" class="secondary-btn" onclick="solicitarCodigo()">1. Enviar Código de Verificación ✉️</button>
-
-                            <div style="margin-top: 6px;">
-                                <label style="color: #38bdf8; font-weight: bold;">2. Ingresa el código de 6 dígitos recibido:</label>
-                                <input type="text" id="ver-code" placeholder="Ej. 482910" style="border-color: #0284c7; font-size: 16px; text-align: center; letter-spacing: 3px;">
+                            <label>Nombre y Apellido:</label>
+                            <input type="text" id="user-name" placeholder="Ej. Carlos Alberto Pérez">
+                            
+                            <label>Selecciona tu País y Teléfono:</label>
+                            <div class="phone-group">
+                                <select id="country-code">
+                                    <option value="+57">🇨🇴 +57 (Colombia)</option>
+                                    <option value="+58">🇻🇪 +58 (Venezuela)</option>
+                                    <option value="+51">🇵🇪 +51 (Perú)</option>
+                                    <option value="+52">🇲🇽 +52 (México)</option>
+                                    <option value="+54">🇦🇷 +54 (Argentina)</option>
+                                    <option value="+1">🇺🇸 +1 (USA / Int)</option>
+                                    <option value="+34">🇪🇸 +34 (España)</option>
+                                </select>
+                                <input type="tel" id="user-phone" placeholder="3001234567">
                             </div>
-                            
-                            <div class="file-upload-group" style="margin-top:6px;">
-                                <label>3. Tomar Selfie (Rostro):</label>
+
+                            <div class="file-upload-group">
+                                <label>1. Fotografía de tu Rostro (Selfie):</label>
                                 <input type="file" id="file-selfie" accept="image/*" capture="user">
                             </div>
 
                             <div class="file-upload-group">
-                                <label>4. \${docName} (Lado FRONTAL):</label>
+                                <label>2. \${doc1}:</label>
                                 <input type="file" id="file-doc-front" accept="image/*">
                             </div>
 
                             <div class="file-upload-group">
-                                <label>5. \${docName} (Lado DORSO / Trasero):</label>
+                                <label>3. \${doc2}:</label>
                                 <input type="file" id="file-doc-back" accept="image/*">
                             </div>
 
-                            <button onclick="registrarUsuario('\${role}')" style="background: \${btnColor}; margin-top: 8px;">Verificar Código y Entrar al Servidor 🚀</button>
+                            <button onclick="registrarUsuario('\${role}')">Enviar Solicitud de Registro 🚀</button>
                         \`;
                     }
-                }
-
-                function solicitarCodigo() {
-                    const email = document.getElementById('user-email').value.trim();
-                    if (!email || !email.includes('@')) {
-                        alert("Ingresa un correo electrónico válido antes de pedir el código.");
-                        return;
-                    }
-                    const btn = event.target;
-                    btn.innerText = "Enviando de inmediato...";
-                    btn.disabled = true;
-
-                    fetch('/api/send-code', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        alert(data.message);
-                        btn.innerText = "Enviar Código de Verificación ✉️";
-                        btn.disabled = false;
-                    })
-                    .catch(() => {
-                        alert("Error de conexión al enviar el código.");
-                        btn.innerText = "Enviar Código de Verificación ✉️";
-                        btn.disabled = false;
-                    });
                 }
 
                 function loginAdmin() {
@@ -269,18 +221,20 @@ app.get('/', (req, res) => {
 
                 function registrarUsuario(role) {
                     const fullName = document.getElementById('user-name').value.trim();
-                    const email = document.getElementById('user-email').value.trim();
-                    const code = document.getElementById('ver-code').value.trim();
+                    const country = document.getElementById('country-code').value;
+                    const rawPhone = document.getElementById('user-phone').value.trim();
+                    const phone = country + rawPhone;
+
                     const selfieInput = document.getElementById('file-selfie');
                     const frontInput = document.getElementById('file-doc-front');
                     const backInput = document.getElementById('file-doc-back');
 
-                    if (!fullName || !email || !code) {
-                        alert("Por favor completa tu nombre, tu correo y escribe el código de verificación.");
+                    if (!fullName || !rawPhone) {
+                        alert("Por favor completa tu nombre y número de celular.");
                         return;
                     }
                     if (selfieInput.files.length === 0 || frontInput.files.length === 0 || backInput.files.length === 0) {
-                        alert("Debes adjuntar tu selfie, la parte frontal y la parte posterior del documento.");
+                        alert("Es obligatorio adjuntar tu selfie y ambos documentos requeridos.");
                         return;
                     }
 
@@ -297,15 +251,16 @@ app.get('/', (req, res) => {
                             r3.onload = function(e3) {
                                 const backDoc = e3.target.result;
 
-                                fetch('/auth-user-media-dual', {
+                                fetch('/auth-user-direct', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ fullName, email, code, role, selfie, frontDoc, backDoc })
+                                    body: JSON.stringify({ fullName, phone, role, selfie, frontDoc, backDoc })
                                 })
                                 .then(res => res.json())
                                 .then(data => {
                                     if (data.success) {
-                                        window.location.href = data.redirectUrl;
+                                        alert(data.message);
+                                        location.reload();
                                     } else {
                                         alert(data.message);
                                     }
@@ -320,68 +275,7 @@ app.get('/', (req, res) => {
     `);
 });
 
-// 2. Envío optimizado y rápido con respuesta inmediata de respaldo si la red bloquea el puerto SMTP
-app.post('/api/send-code', async (req, res) => {
-    const { email } = req.body;
-    if (!email || !email.includes('@')) {
-        return res.json({ success: false, message: "Correo inválido." });
-    }
-
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const codesDB = getCodesDB();
-    codesDB[email] = verificationCode;
-    fs.writeFileSync(CODES_FILE, JSON.stringify(codesDB, null, 2));
-
-    const mailOptions = {
-        from: '"Librex Support" <vitorinoarenas1000@gmail.com>',
-        to: email,
-        subject: 'Código de Verificación - Librex 🚖',
-        html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; background: #f3f4f6; border-radius: 10px;">
-                <h2 style="color: #0284c7;">Bienvenido a Librex 🚖</h2>
-                <p>Tu código de verificación para continuar con el registro es:</p>
-                <div style="background: #ffffff; padding: 15px; font-size: 24px; font-weight: bold; text-align: center; color: #111827; border-radius: 6px; letter-spacing: 4px; margin: 15px 0;">
-                    ${verificationCode}
-                </div>
-                <p style="font-size: 12px; color: #6b7280;">Si no solicitaste este código, puedes ignorar este mensaje.</p>
-            </div>
-        `
-    };
-
-    // Usamos un temporizador de protección para evitar que la petición se quede congelada si el servidor de Google tarda
-    let emailSent = false;
-
-    const timeoutPromise = new Promise((resolve) => {
-        setTimeout(() => {
-            if (!emailSent) {
-                resolve({ fastFallback: true });
-            }
-        }, 3500); // 3.5 segundos máximo de espera para agilizar
-    });
-
-    const sendPromise = transporter.sendMail(mailOptions).then(() => {
-        emailSent = true;
-        return { fastFallback: false };
-    }).catch((error) => {
-        console.error("⚠️ [AVISO SMTP LENTO/BLOQUEADO]:", error.message);
-        return { fastFallback: true, error: error.message };
-    });
-
-    const result = await Promise.race([sendPromise, timeoutPromise]);
-
-    if (result.fastFallback) {
-        console.log(`🔑 [CÓDIGO DE EMERGENCIA INMEDIATO PARA ${email}]: ${verificationCode}`);
-        res.json({ 
-            success: true, 
-            message: `[Modo Rápido Activo] Tu código de verificación es: ${verificationCode}. (Escríbelo abajo para ingresar inmediatamente).` 
-        });
-    } else {
-        console.log(`[CORREO ENVIADO] Código ${verificationCode} enviado a ${email}`);
-        res.json({ success: true, message: `Código enviado con éxito a ${email}. Revisa tu bandeja de entrada.` });
-    }
-});
-
-// 3. Autenticación de Administrador
+// 2. Autenticación Administrador Maestro
 app.post('/auth-admin', (req, res) => {
     const { email, password } = req.body;
     if (email === 'vitorinoarenas1000@gmail.com' && password === '94550Mic@') {
@@ -397,77 +291,65 @@ app.post('/auth-admin', (req, res) => {
         const redirectUrl = `${ADMIN_SERVICE_URL}/admin?key=librex2026&email=${encodeURIComponent(email)}`;
         return res.json({ success: true, redirectUrl });
     } else {
-        return res.json({ success: false, message: "Credenciales incorrectas." });
+        return res.json({ success: false, message: "Credenciales de administrador incorrectas." });
     }
 });
 
-// 4. Procesador de Registro con Validación Estricta del Código Ingresado
-app.post('/auth-user-media-dual', (req, res) => {
-    const { fullName, email, code, role, selfie, frontDoc, backDoc } = req.body;
+// 3. Registro Directo con Creación de Carpeta Inalterable para Revisión de Documentos
+app.post('/auth-user-direct', (req, res) => {
+    const { fullName, phone, role, selfie, frontDoc, backDoc } = req.body;
     
-    const codesDB = getCodesDB();
-    if (!codesDB[email] || codesDB[email] !== code) {
-        return res.json({ success: false, message: "El código de verificación es incorrecto o no coincide. Verifícalo bien." });
+    const safePhoneKey = phone.replace(/[^a-zA-Z0-9]/g, '_');
+    const userFolder = path.join(UPLOADS_DIR, safePhoneKey);
+    if (!fs.existsSync(userFolder)) {
+        fs.mkdirSync(userFolder, { recursive: true });
     }
-
-    const safeEmailKey = email.replace(/[^a-zA-Z0-9]/g, '_');
 
     try {
         const selfieBuffer = Buffer.from(selfie.split(',')[1], 'base64');
         const frontBuffer = Buffer.from(frontDoc.split(',')[1], 'base64');
         const backBuffer = Buffer.from(backDoc.split(',')[1], 'base64');
 
-        fs.writeFileSync(path.join(UPLOADS_DIR, `${safeEmailKey}_selfie.jpg`), selfieBuffer);
-        fs.writeFileSync(path.join(UPLOADS_DIR, `${safeEmailKey}_front.jpg`), frontBuffer);
-        fs.writeFileSync(path.join(UPLOADS_DIR, `${safeEmailKey}_back.jpg`), backBuffer);
+        // Guardado físico de archivos multimedia en el servidor
+        fs.writeFileSync(path.join(userFolder, `selfie.jpg`), selfieBuffer);
+        fs.writeFileSync(path.join(userFolder, `front.jpg`), frontBuffer);
+        fs.writeFileSync(path.join(userFolder, `back.jpg`), backBuffer);
     } catch (e) {
-        console.error("Error guardando archivos:", e);
+        console.error("Error guardando archivos en disco:", e);
     }
 
-    const db = getDB();
     const userData = {
         fullName,
-        email,
-        selfieUrl: `/uploads/${safeEmailKey}_selfie.jpg`,
-        docFrontUrl: `/uploads/${safeEmailKey}_front.jpg`,
-        docBackUrl: `/uploads/${safeEmailKey}_back.jpg`,
-        verified: true,
-        updatedAt: new Date().toISOString()
+        phone,
+        role,
+        selfieUrl: `/uploads/${safePhoneKey}/selfie.jpg`,
+        docFrontUrl: `/uploads/${safePhoneKey}/front.jpg`,
+        docBackUrl: `/uploads/${safePhoneKey}/back.jpg`,
+        status: 'pending_review', // Quedan pendientes hasta que tú los actives manualmente
+        registeredAt: new Date().toISOString()
     };
 
+    // Archivo info.json con los datos completos del usuario
+    fs.writeFileSync(path.join(userFolder, `info.json`), JSON.stringify(userData, null, 2));
+
+    // Guardar en la base de datos global
+    const db = getDB();
     if (role === 'driver') {
-        db.drivers[email] = userData;
+        db.drivers[phone] = userData;
     } else {
-        db.clients[email] = userData;
+        db.clients[phone] = userData;
     }
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-    res.setHeader('Set-Cookie', [
-        `librex_session_email=${encodeURIComponent(email)}; Path=/; Max-Age=${30 * 24 * 60 * 60}; HttpOnly; SameSite=Lax`,
-        `librex_session_role=${role}; Path=/; Max-Age=${30 * 24 * 60 * 60}; HttpOnly; SameSite=Lax`
-    ]);
-
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const absolutePictureUrl = `${protocol}://${host}/uploads/${safeEmailKey}_selfie.jpg`;
-
-    let redirectUrl = role === 'driver' ? DRIVER_SERVICE_URL : USER_SERVICE_URL;
-    const finalRedirect = `${redirectUrl}/?email=${encodeURIComponent(email)}&name=${encodeURIComponent(fullName)}&picture=${encodeURIComponent(absolutePictureUrl)}&verified=true`;
-
-    res.json({ success: true, redirectUrl: finalRedirect });
+    res.json({ 
+        success: true, 
+        message: "¡Registro enviado con éxito! Tus documentos están en revisión por el equipo central. Pronto serás activado." 
+    });
 });
 
-// 5. Consulta y Archivos Públicos
-app.get('/api/user-profile', (req, res) => {
-    const { email } = req.query;
-    const db = getDB();
-    const user = db.clients[email] || db.drivers[email];
-    if (user) res.json({ success: true, user });
-    else res.json({ success: false, message: "No encontrado." });
-});
-
+// Exponer archivos estáticos para que puedas ver las fotos en tu panel de administración
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.listen(PORT, () => {
-    console.log(`[SERVER-MAIN] Servidor optimizado para velocidad máxima activo en puerto ${PORT}`);
+    console.log(`[LIBREX TRANSPORT] Servidor operando sin pagos ni códigos en puerto ${PORT}`);
 });
