@@ -98,7 +98,7 @@ function guardarImagenBase64(base64String, prefix, phone) {
     }
 }
 
-// Endpoint para recibir la sincronización del conductor remoto
+// Endpoint mejorado para recibir la sincronización del conductor remoto
 app.post('/api/admin/sync-driver', async (req, res) => {
     try {
         const nuevoConductor = req.body;
@@ -107,13 +107,14 @@ app.post('/api/admin/sync-driver', async (req, res) => {
         }
 
         let conductorExistente = await Driver.findOne({ phone: nuevoConductor.phone });
-        if (!conductorExistente && nuevoConductor.email) {
+        if (!conductorExistente && nuevoConductor.email && nuevoConductor.email !== 'Sin correo') {
             conductorExistente = await Driver.findOne({ email: nuevoConductor.email });
         }
 
         let selfieUrl = nuevoConductor.selfieUrl || '';
         let docUrl = nuevoConductor.docFrontUrl || '';
 
+        // Procesar imágenes si vienen en formato Base64 desde el servidor del conductor
         if (nuevoConductor.selfieBase64 && nuevoConductor.selfieBase64.startsWith('data:')) {
             selfieUrl = guardarImagenBase64(nuevoConductor.selfieBase64, 'driver_selfie', nuevoConductor.phone);
         }
@@ -125,7 +126,7 @@ app.post('/api/admin/sync-driver', async (req, res) => {
             id: nuevoConductor.id,
             fullName: nuevoConductor.fullName,
             phone: nuevoConductor.phone,
-            email: nuevoConductor.email,
+            email: nuevoConductor.email || 'Sin correo',
             selfieUrl: selfieUrl || (conductorExistente ? conductorExistente.selfieUrl : ''),
             docFrontUrl: docUrl || (conductorExistente ? conductorExistente.docFrontUrl : ''),
             status: conductorExistente ? conductorExistente.status : 'Activo',
@@ -140,7 +141,7 @@ app.post('/api/admin/sync-driver', async (req, res) => {
 
         return res.json({ success: true, message: '¡Conductor sincronizado y registrado en el panel admin!' });
     } catch (error) {
-        console.error(error);
+        console.error('[SYNC ERROR]:', error);
         return res.status(500).json({ success: false, message: 'Error interno en el servidor.' });
     }
 });
