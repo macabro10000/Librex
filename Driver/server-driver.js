@@ -10,8 +10,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 
-// CONFIGURACIÓN CORRECTA DE ARCHIVOS ESTÁTICOS (CSS, JS, Imágenes)
-app.use(express.static(path.join(__dirname)));
+// Servir archivos estáticos correctamente desde la misma carpeta raíz
+app.use(express.static(__dirname));
 
 // URL de tu servidor administrador central en Render
 const ADMIN_URL = process.env.ADMIN_URL || 'https://librex-980i.onrender.com';
