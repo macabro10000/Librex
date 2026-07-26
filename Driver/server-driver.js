@@ -104,7 +104,7 @@ app.post('/api/register', async (req, res) => {
 
 // Ruta raíz que carga automáticamente el index.html desde public
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => console.log(`[DRIVER-SERVER] Servidor de Conductores activo en puerto ${PORT}`));
