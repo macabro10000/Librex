@@ -3,13 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Librex - Panel Maestro Admin</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Librex - Panel Maestro Admin Elite</title>
+    <style>
+        :root {
+            --bg-color: #0b0b0b;
+            --card-bg: rgba(20, 20, 20, 0.92);
+            --gold-primary: #d4af37;
+            --gold-light: #f3e5ab;
+            --gold-dark: #997a15;
+            --text-main: #f5f5f5;
+            --text-muted: #a3a3a3;
+            --border-gold: rgba(212, 175, 55, 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card-bg); border: 1px solid var(--border-gold);
+            padding: 20px 30px; border-radius: 16px; margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        header h1 { color: var(--gold-primary); font-size: 22px; font-weight: 700; }
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171;
+            padding: 8px 16px; border-radius: 8px; font-weight: bold; text-decoration: none; font-size: 13px;
+            transition: background 0.2s;
+        }
+        .btn-logout:hover { background: rgba(239, 68, 68, 0.4); }
+
+        .section {
+            background: var(--card-bg); border: 1px solid var(--border-gold);
+            border-radius: 16px; padding: 25px; margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .section h2 { color: var(--gold-light); font-size: 18px; margin-bottom: 20px; border-bottom: 1px solid var(--border-gold); padding-bottom: 10px; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 14px 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.1); font-size: 14px; }
+        th { color: var(--gold-primary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { color: var(--text-main); }
+        .sub-text { color: var(--text-muted); font-size: 12px; }
+
+        .badge {
+            background: rgba(212, 175, 55, 0.15); border: 1px solid var(--border-gold);
+            color: var(--gold-light); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold;
+        }
+
+        .photo-link { color: var(--gold-primary); text-decoration: none; font-weight: 600; margin-right: 8px; font-size: 13px; }
+        .photo-link:hover { text-decoration: underline; }
+
+        .btn {
+            padding: 6px 12px; border-radius: 8px; font-weight: bold; border: none; cursor: pointer; font-size: 12px; margin-right: 5px;
+        }
+        .btn-gift { background: rgba(212, 175, 55, 0.2); border: 1px solid var(--border-gold); color: var(--gold-light); }
+        .btn-gift:hover { background: rgba(212, 175, 55, 0.4); }
+        .btn-del { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; }
+        .btn-del:hover { background: rgba(239, 68, 68, 0.4); }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Librex &bull; Panel Maestro (MongoDB Atlas)</h1>
+            <h1>Librex &bull; Panel Maestro Elite (MongoDB)</h1>
             <a href="/logout" class="btn-logout">Cerrar Sesión</a>
         </header>
 
@@ -36,7 +95,6 @@
                 <tr>
                     <th>Pasajero</th>
                     <th>Teléfono / Correo</th>
-                    <th>Documentos (Cédula)</th>
                     <th>Saldo / Billetera</th>
                     <th>Estado</th>
                     <th>Acciones</th>
@@ -75,18 +133,6 @@
             const res = await fetch('/api/admin/delete-user', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, tipo })
-            });
-            alert((await res.json()).message);
-            window.location.reload();
-        }
-
-        async function editarUsuario(id, tipo, nombre, tel) {
-            const nuevoNombre = prompt("Nombre:", nombre);
-            const nuevoTel = prompt("Teléfono:", tel);
-            if (!nuevoNombre || !nuevoTel) return;
-            const res = await fetch('/api/admin/edit-user', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, tipo, fullName: nuevoNombre, phone: nuevoTel })
             });
             alert((await res.json()).message);
             window.location.reload();
