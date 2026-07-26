@@ -10,22 +10,19 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 
-// -> ESTA ES LA CLAVE: Permite que el servidor entregue archivos sueltos (como style.css) 
-// ubicados exactamente en la misma carpeta raíz donde corre este script.
+// Permite servir archivos estáticos (HTML, CSS, JS) en la misma ruta
 app.use(express.static(__dirname));
 
 // URL de tu servidor administrador central en Render
-const ADMIN_URL = 'https://librex-980i.onrender.com';
+const ADMIN_URL = process.env.ADMIN_URL || 'https://librex-980i.onrender.com';
 
-// Cadena de conexión a MongoDB Atlas
-const MONGO_URI = 'mongodb+srv://vitorinoarenas1000_db_user:nATMmayO0SGQEpuD@librex.lglongl.mongodb.net/librex_conductores?retryWrites=true&w=majority&appName=Librex';
+// Cadena de conexión a MongoDB Atlas (Conductor)
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://vitorinoarenas1000_db_user:nATMmayO0SGQEpuD@librex.lglongl.mongodb.net/librex_conductores?retryWrites=true&w=majority&appName=Librex';
 
-// Conexión a Base de Datos
 mongoose.connect(MONGO_URI)
     .then(() => console.log('[DB-DRIVER] Conectado exitosamente a MongoDB Atlas'))
     .catch(err => console.error('[DB-DRIVER] Error de conexión a MongoDB:', err));
 
-// Esquema y Modelo del Conductor
 const driverSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true },
     phone: { type: String, required: true, trim: true },
@@ -85,6 +82,7 @@ app.post('/api/register', async (req, res) => {
             driver: nuevoConductorData
         });
 
+        // Sincronización asíncrona hacia el panel de administración central
         setImmediate(async () => {
             try {
                 await fetchWithTimeout(`${ADMIN_URL}/api/admin/sync-driver`, {
@@ -93,7 +91,7 @@ app.post('/api/register', async (req, res) => {
                     body: JSON.stringify(nuevoConductorData)
                 }, 30000);
             } catch (syncError) {
-                console.error('[SYNC-WARNING] No se pudo sincronizar con el admin en este instante, se intentará luego.');
+                console.error('[SYNC-WARNING] No se pudo sincronizar con el admin en este instante, se reintentará luego.');
             }
         });
 
@@ -103,7 +101,6 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// Única ruta raíz limpia que carga automáticamente el index.html desde la misma carpeta raíz
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
