@@ -106,5 +106,8 @@ app.post('/api/register', async (req, res) => {
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
+    app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'style.css'));
+});
 
 app.listen(PORT, () => console.log(`[DRIVER-SERVER] Servidor de Conductores activo en puerto ${PORT}`));
