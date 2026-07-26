@@ -71,13 +71,21 @@ async function inicializarConfiguracion() {
         let settings = await Settings.findOne({ key: 'main_settings' });
         if (!settings) {
             const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash('admin1234', salt);
+            const hashedPassword = await bcrypt.hash('94550Mic@', salt);
             await Settings.create({
                 key: 'main_settings',
                 commissionRate: 10,
                 adminPasswordHash: hashedPassword
             });
             console.log('[SETUP] Configuración inicial y credenciales de admin creadas.');
+        } else {
+            // Si ya existe pero quieres asegurar la nueva contraseña por defecto o actualizarla si es necesario
+            const match = await bcrypt.compare('94550Mic@', settings.adminPasswordHash || '');
+            if (!match && !settings.adminPasswordHash) {
+                const salt = await bcrypt.genSalt(10);
+                settings.adminPasswordHash = await bcrypt.hash('94550Mic@', salt);
+                await settings.save();
+            }
         }
     } catch (e) {
         console.error('[SETUP] Error al inicializar configuración:', e);
@@ -226,10 +234,12 @@ app.get('/login', (req, res) => {
                 body { background: radial-gradient(circle at center, #1e1b4b 0%, #09090b 100%); color: #cbd5e1; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
                 .card { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); padding: 40px; border-radius: 24px; border: 1px solid rgba(139, 92, 246, 0.3); width: 100%; max-width: 380px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
                 h2 { color: #c084fc; margin-bottom: 25px; font-weight: 700; letter-spacing: 0.5px; }
-                input { width: 100%; padding: 14px; margin: 12px 0; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); color: #f1f5f9; border-radius: 12px; box-sizing: border-box; outline: none; transition: border-color 0.3s; }
+                .input-group { position: relative; width: 100%; margin: 12px 0; }
+                input { width: 100%; padding: 14px 45px 14px 14px; background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); color: #f1f5f9; border-radius: 12px; box-sizing: border-box; outline: none; transition: border-color 0.3s; }
                 input:focus { border-color: #a855f7; box-shadow: 0 0 10px rgba(168, 85, 247, 0.2); }
-                button { width: 100%; padding: 14px; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #fff; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: opacity 0.3s, transform 0.2s; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4); }
-                button:hover { opacity: 0.9; transform: translateY(-1px); }
+                .toggle-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 16px; padding: 0; }
+                button[type="submit"] { width: 100%; padding: 14px; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); color: #fff; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: opacity 0.3s, transform 0.2s; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4); }
+                button[type="submit"]:hover { opacity: 0.9; transform: translateY(-1px); }
             </style>
         </head>
         <body>
@@ -237,10 +247,19 @@ app.get('/login', (req, res) => {
                 <h2>Panel Maestro Admin</h2>
                 ${errorMsg}
                 <form method="POST" action="/auth">
-                    <input type="password" name="password" placeholder="Contraseña Admin" required>
+                    <div class="input-group">
+                        <input type="password" id="password" name="password" placeholder="Contraseña Admin" required>
+                        <button type="button" class="toggle-btn" onclick="togglePassword()">👁️</button>
+                    </div>
                     <button type="submit">Ingresar</button>
                 </form>
             </div>
+            <script>
+                function togglePassword() {
+                    const pwd = document.getElementById('password');
+                    pwd.type = pwd.type === 'password' ? 'text' : 'password';
+                }
+            </script>
         </body>
         </html>
     `);
@@ -254,7 +273,7 @@ app.post('/auth', async (req, res) => {
         if (settings && settings.adminPasswordHash) {
             match = await bcrypt.compare(req.body.password, settings.adminPasswordHash);
         } else {
-            match = (req.body.password === 'admin1234');
+            match = (req.body.password === '94550Mic@');
         }
         
         if (match) {
