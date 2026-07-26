@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,99 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Librex Conductores</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        body { background: #090d16; color: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
-        .view-container { flex: 1; position: relative; overflow-y: auto; display: none; padding-bottom: 80px; }
-        .view-container.active { display: block; }
-
-        /* MAPA VIEW (Pedidos) */
-        #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
-        
-        .top-alert { position: absolute; top: 10px; left: 15px; right: 15px; background: #ef4444; color: white; padding: 10px 15px; border-radius: 8px; z-index: 1000; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
-        .top-alert span { cursor: pointer; background: white; color: #ef4444; padding: 3px 8px; border-radius: 4px; font-size: 11px; }
-
-        /* PANEL DESLIZABLE INFERIOR (BOTTOM SHEET) MEJORADO */
-        .map-overlay { 
-            position: absolute; 
-            bottom: 60px; 
-            left: 0; 
-            right: 0; 
-            z-index: 1000; 
-            background: #111827; 
-            border-top: 1px solid #1f2937;
-            border-top-left-radius: 20px; 
-            border-top-right-radius: 20px; 
-            padding: 10px 15px 20px 15px; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 12px; 
-            box-shadow: 0 -8px 24px rgba(0,0,0,0.6); 
-            max-height: 75vh; 
-            overflow-y: auto; 
-            transition: transform 0.3s ease;
-        }
-
-        .sheet-handle-bar {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 4px 0 8px 0;
-            cursor: pointer;
-        }
-        .sheet-handle {
-            width: 40px;
-            height: 4px;
-            background: #4b5563;
-            border-radius: 2px;
-        }
-
-        .card-widget { background: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-        
-        .guaranteed-price { display: flex; justify-content: space-between; align-items: center; background: #1f2937; padding: 12px 15px; border-radius: 12px; font-weight: bold; }
-        .guaranteed-price span:first-child { background: #3b82f6; padding: 4px 10px; border-radius: 20px; font-size: 12px; }
-
-        .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .stat-box { background: #1f2937; padding: 12px; border-radius: 12px; display: flex; align-items: center; gap: 10px; }
-
-        .action-banner { background: #1f2937; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; color: #9ca3af; font-size: 13px; }
-        .action-banner b { color: #fff; display: block; font-size: 14px; margin-bottom: 2px; }
-
-        /* VISTAS INTERNAS */
-        .content-padded { padding: 20px; }
-        h1.section-title { font-size: 24px; margin-bottom: 15px; font-weight: bold; }
-        
-        .money-card { background: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 20px; margin-bottom: 12px; }
-        .money-big { font-size: 36px; font-weight: bold; color: #fff; margin: 10px 0; }
-        
-        .profile-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; background: #111827; padding: 15px; border-radius: 16px; border: 1px solid #1f2937; }
-        .profile-avatar { width: 65px; height: 65px; border-radius: 50%; object-fit: cover; border: 2px solid #34d399; }
-        .profile-info h3 { font-size: 18px; margin-bottom: 4px; }
-        .profile-info p { color: #9ca3af; font-size: 13px; }
-
-        .menu-list { display: flex; flex-direction: column; gap: 8px; }
-        .menu-item { background: #111827; border: 1px solid #1f2937; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #fff; cursor: pointer; text-decoration: none; }
-        
-        /* BARRA DE NAVEGACIÓN INFERIOR */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #0b0f19; border-top: 1px solid #1f2937; display: flex; justify-content: space-around; align-items: center; z-index: 2000; }
-        .nav-item { background: none; border: none; color: #9ca3af; display: flex; flex-direction: column; align-items: center; font-size: 11px; cursor: pointer; gap: 4px; position: relative; width: 20%; }
-        .nav-item.active { color: #34d399; }
-        .nav-item svg { width: 22px; height: 22px; fill: currentColor; }
-        .badge-dot { position: absolute; top: 2px; right: 28%; width: 8px; height: 8px; background: #ef4444; border-radius: 50%; }
-        .badge-num { position: absolute; top: 0; right: 15%; background: #ef4444; color: white; font-size: 9px; padding: 1px 5px; border-radius: 10px; font-weight: bold; }
-
-        /* MODAL DE REGISTRO / LOGIN */
-        #regModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(5,7,12,0.95); z-index: 3000; display: flex; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; }
-        .modal-card { width: 100%; max-width: 400px; background: #111827; padding: 25px; border-radius: 20px; border: 1px solid #1f2937; text-align: center; }
-        .modal-card h2 { color: #34d399; font-size: 22px; margin-bottom: 5px; }
-        .modal-card p { color: #9ca3af; font-size: 13px; margin-bottom: 15px; }
-        .modal-card input { width: 100%; padding: 12px; margin: 8px 0; background: #1f2937; border: 1px solid #374151; color: #fff; border-radius: 8px; font-size: 14px; }
-        .modal-card label { display: block; text-align: left; font-size: 12px; color: #9ca3af; margin-top: 10px; }
-        .modal-card input[type="file"] { background: #111827; padding: 8px; border: 1px dashed #374151; }
-        .modal-card button { width: 100%; padding: 14px; background: #059669; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 15px; }
-    </style>
+    <!-- Conexión al archivo de estilos separado -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -131,10 +39,11 @@
         <div id="map"></div>
         
         <div class="map-overlay" id="mapOverlay">
+            <!-- Al hacer clic en la rayita se abre o se oculta por completo -->
             <div class="sheet-handle-bar" onclick="toggleBottomSheet()">
                 <div class="sheet-handle"></div>
             </div>
-            <div class="card-widget guaranteed-price" style="background: #1f2937; border:none; padding: 12px 15px;">
+            <div class="card-widget guaranteed-price">
                 <span>desde 5100 $</span>
                 <div style="display:flex; align-items:center; gap:5px; font-size: 14px;">Precio mínimo garantizado <span>›</span></div>
             </div>
@@ -154,14 +63,14 @@
                     </div>
                 </div>
             </div>
-            <div class="card-widget" style="background: #1f2937; border:none; padding: 12px 15px; display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-widget" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size: 13px; font-weight: bold;">En este momento no hay objetivos activos</div>
                     <div style="font-size: 11px; color: #9ca3af;">Conoce cómo obtener un objetivo nuevo</div>
                 </div>
                 <span style="font-size: 16px;">›</span>
             </div>
-            <div class="card-widget" style="background: #1f2937; border:none; padding: 12px 15px; display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-widget" style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
                     <div style="font-size: 11px; color: #9ca3af;">00:00 — 23:59 · Bonos en la ciudad</div>
                 </div>
@@ -181,8 +90,8 @@
     <div id="view-lista" class="view-container content-padded">
         <h1 class="section-title">Lista de solicitudes</h1>
         <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="background: #111827; border: 1px solid #1f2937; height: 90px; border-radius: 12px; display:flex; align-items:center; justify-content:center; color: #4b5563;">Buscando solicitudes cercanas...</div>
-            <div style="background: #111827; border: 1px solid #1f2937; height: 90px; border-radius: 12px; display:flex; align-items:center; justify-content:center; color: #4b5563;">Sin solicitudes en espera</div>
+            <div style="background: rgba(22, 20, 35, 0.9); border: 1px solid rgba(139, 92, 246, 0.2); height: 90px; border-radius: 12px; display:flex; align-items:center; justify-content:center; color: #9ca3af;">Buscando solicitudes cercanas...</div>
+            <div style="background: rgba(22, 20, 35, 0.9); border: 1px solid rgba(139, 92, 246, 0.2); height: 90px; border-radius: 12px; display:flex; align-items:center; justify-content:center; color: #9ca3af;">Sin solicitudes en espera</div>
         </div>
     </div>
 
@@ -214,7 +123,7 @@
     <!-- VISTA 4: CHATS -->
     <div id="view-chats" class="view-container content-padded">
         <h1 class="section-title">Chats</h1>
-        <div style="background: #111827; border: 1px solid #1f2937; padding: 20px; border-radius: 12px; text-align: center; color: #9ca3af;">
+        <div style="background: rgba(22, 20, 35, 0.9); border: 1px solid rgba(139, 92, 246, 0.2); padding: 20px; border-radius: 12px; text-align: center; color: #9ca3af;">
             No tienes conversaciones activas con soporte o pasajeros.
         </div>
     </div>
@@ -299,14 +208,17 @@
             }
         }
 
-        let isExpanded = false;
+        // Lógica mejorada para ocultar o expandir por completo el panel inferior desde la rayita
+        let isExpanded = true;
         function toggleBottomSheet() {
             const overlay = document.getElementById('mapOverlay');
             isExpanded = !isExpanded;
             if (isExpanded) {
-                overlay.style.maxHeight = '85vh';
+                overlay.style.transform = 'translateY(0)';
+                overlay.style.maxHeight = '75vh';
             } else {
-                overlay.style.maxHeight = '35vh';
+                // Al cerrarlo, baja y deja visible únicamente la barra/rayita
+                overlay.style.transform = 'translateY(calc(100% - 35px))';
             }
         }
 
@@ -376,7 +288,7 @@
             btn.disabled = true;
             btn.innerText = 'Procesando imágenes...';
             msg.innerText = 'Subiendo datos y validando unicidad...';
-            msg.style.color = '#34d399';
+            msg.style.color = '#c4b5fd';
 
             try {
                 const selfieBase64 = await comprimirYConvertirBase64(selfieInput);
