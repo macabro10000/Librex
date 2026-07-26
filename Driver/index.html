@@ -16,14 +16,27 @@
             <p>Registro y Verificación de Conductor</p>
             <form id="regForm">
                 <input type="text" id="fullName" placeholder="Nombre Completo" required>
+                <input type="text" id="cedula" placeholder="Número de Cédula" required>
                 <input type="tel" id="phone" placeholder="Número de Teléfono" required>
-                <input type="email" id="email" placeholder="Correo Electrónico" required>
+                <input type="email" id="email" placeholder="Correo Electrónico">
+                
+                <input type="text" id="carBrandModel" placeholder="Marca y Modelo del Carro (ej. Hyundai Atos)" required>
+                <input type="text" id="carPlate" placeholder="Placa del Carro (ej. VCW348)" required>
                 
                 <label>Foto de Rostro (Selfie)</label>
                 <input type="file" id="selfieFile" accept="image/*" required>
                 
-                <label>Pase / Licencia de Conducir</label>
-                <input type="file" id="docFile" accept="image/*" required>
+                <label>Licencia de Conducir (Frente)</label>
+                <input type="file" id="licenseFrontFile" accept="image/*" required>
+
+                <label>Licencia de Conducir (Reverso)</label>
+                <input type="file" id="licenseBackFile" accept="image/*" required>
+
+                <label>Tarjeta de Propiedad (Ambos lados)</label>
+                <input type="file" id="propertyCardFile" accept="image/*" required>
+
+                <label>Foto del Carro (Frente mostrando la placa)</label>
+                <input type="file" id="carPhotoFile" accept="image/*" required>
 
                 <button type="submit" id="btnSubmit">Registrarse como Conductor</button>
             </form>
@@ -188,8 +201,8 @@
         </div>
         <h3 style="font-size: 16px; margin: 20px 0 10px 0; color: var(--gold-primary);">Mis vehículos</h3>
         <div class="menu-item" style="display: block;">
-            <div style="font-weight: bold; font-size: 15px;">Hyundai Atos · 1 vehículo en total</div>
-            <div style="background: var(--gold-primary); color: #000; display: inline-block; padding: 4px 10px; border-radius: 4px; font-weight: bold; margin-top: 8px;">VCW348</div>
+            <div style="font-weight: bold; font-size: 15px;" id="profileCarInfo">Hyundai Atos · 1 vehículo en total</div>
+            <div style="background: var(--gold-primary); color: #000; display: inline-block; padding: 4px 10px; border-radius: 4px; font-weight: bold; margin-top: 8px;" id="profileCarPlate">VCW348</div>
         </div>
         <div class="menu-list" style="margin-top: 15px;">
             <div class="menu-item"><span>Solución de problemas</span> <span style="color:var(--gold-primary)">1 ›</span></div>
@@ -301,17 +314,23 @@
         function updateDriverUI(driver) {
             document.getElementById('profileName').innerText = driver.fullName;
             document.getElementById('profilePhone').innerText = driver.phone;
+            if(driver.carBrandModel) document.getElementById('profileCarInfo').innerText = driver.carBrandModel + ' · 1 vehículo en total';
+            if(driver.carPlate) document.getElementById('profileCarPlate').innerText = driver.carPlate;
             if (driver.selfieBase64) document.getElementById('profileAvatarImg').src = driver.selfieBase64;
         }
 
         document.getElementById('regForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSubmit'), msg = document.getElementById('msg');
+            
             const selfieInput = document.getElementById('selfieFile').files[0];
-            const docInput = document.getElementById('docFile').files[0];
+            const licenseFrontInput = document.getElementById('licenseFrontFile').files[0];
+            const licenseBackInput = document.getElementById('licenseBackFile').files[0];
+            const propertyCardInput = document.getElementById('propertyCardFile').files[0];
+            const carPhotoInput = document.getElementById('carPhotoFile').files[0];
 
-            if (!selfieInput || !docInput) {
-                alert('Debes adjuntar tu foto de rostro y tu pase de conducir.');
+            if (!selfieInput || !licenseFrontInput || !licenseBackInput || !propertyCardInput || !carPhotoInput) {
+                alert('Debes adjuntar todos los archivos requeridos (Selfie, Licencia frente/reverso, Tarjeta de propiedad y Foto del carro).');
                 return;
             }
 
@@ -322,13 +341,23 @@
 
             try {
                 const selfieBase64 = await comprimirYConvertirBase64(selfieInput);
-                const docFrontBase64 = await comprimirYConvertirBase64(docInput);
+                const licenseFrontBase64 = await comprimirYConvertirBase64(licenseFrontInput);
+                const licenseBackBase64 = await comprimirYConvertirBase64(licenseBackInput);
+                const propertyCardBase64 = await comprimirYConvertirBase64(propertyCardInput);
+                const carPhotoBase64 = await comprimirYConvertirBase64(carPhotoInput);
 
                 const data = {
                     fullName: document.getElementById('fullName').value,
+                    cedula: document.getElementById('cedula').value,
                     phone: document.getElementById('phone').value,
                     email: document.getElementById('email').value,
-                    selfieBase64, docFrontBase64
+                    carBrandModel: document.getElementById('carBrandModel').value,
+                    carPlate: document.getElementById('carPlate').value,
+                    selfieBase64,
+                    licenseFrontBase64,
+                    licenseBackBase64,
+                    propertyCardBase64,
+                    carPhotoBase64
                 };
 
                 const res = await fetch('/api/register', {
