@@ -20,7 +20,7 @@ mongoose.connect(MONGO_URI)
     .then(() => console.log('[DB-DRIVER] Conectado exitosamente a MongoDB Atlas'))
     .catch(err => console.error('[DB-DRIVER] Error de conexión a MongoDB:', err));
 
-// Esquema actualizado con todos los campos solicitados para el registro del conductor
+// Esquema actualizado con todos los campos y la tarjeta de propiedad
 const driverSchema = new mongoose.Schema({
     id: { type: String, required: true, unique: true },
     fullName: { type: String, required: true, trim: true },
@@ -32,6 +32,7 @@ const driverSchema = new mongoose.Schema({
     selfieBase64: { type: String, default: '' },
     licenseFrontBase64: { type: String, default: '' },
     licenseBackBase64: { type: String, default: '' },
+    propertyCardBase64: { type: String, default: '' },
     carPhotoBase64: { type: String, default: '' },
     status: { type: String, default: 'Disponible' },
     createdAt: { type: String, default: () => new Date().toISOString() },
@@ -65,6 +66,7 @@ app.post('/api/register', async (req, res) => {
         selfieBase64, 
         licenseFrontBase64, 
         licenseBackBase64, 
+        propertyCardBase64,
         carPhotoBase64 
     } = req.body;
 
@@ -88,6 +90,7 @@ app.post('/api/register', async (req, res) => {
             selfieBase64: selfieBase64 || '',
             licenseFrontBase64: licenseFrontBase64 || '',
             licenseBackBase64: licenseBackBase64 || '',
+            propertyCardBase64: propertyCardBase64 || '',
             carPhotoBase64: carPhotoBase64 || '',
             status: 'Disponible',
             createdAt: new Date().toISOString(),
@@ -97,7 +100,6 @@ app.post('/api/register', async (req, res) => {
         const nuevoConductorDB = new Driver(nuevoConductorData);
         await nuevoConductorDB.save();
 
-        // Sincronización opcional hacia el panel de administración
         try {
             await fetchWithTimeout(`${ADMIN_URL}/api/admin/sync-driver`, {
                 method: 'POST',
@@ -120,12 +122,10 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// Ruta raíz
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// SISTEMA ANTIDURMIENTO (Realiza una auto-petición cada 4 minutos para mantener el servidor despierto en Render)
 const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 setInterval(() => {
     fetch(`${SELF_URL}/`).catch(() => {});
