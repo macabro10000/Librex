@@ -24,19 +24,19 @@
                 <input type="text" id="carPlate" placeholder="Placa del Carro (ej. VCW348)" required>
                 
                 <label>Foto de Rostro (Selfie)</label>
-                <input type="file" id="selfieFile" accept="image/*" required>
+                <input type="file" id="selfieFile" accept="image/*" capture="user" required>
                 
                 <label>Licencia de Conducir (Frente)</label>
-                <input type="file" id="licenseFrontFile" accept="image/*" required>
+                <input type="file" id="licenseFrontFile" accept="image/*" capture="environment" required>
 
                 <label>Licencia de Conducir (Reverso)</label>
-                <input type="file" id="licenseBackFile" accept="image/*" required>
+                <input type="file" id="licenseBackFile" accept="image/*" capture="environment" required>
 
                 <label>Tarjeta de Propiedad (Ambos lados)</label>
-                <input type="file" id="propertyCardFile" accept="image/*" required>
+                <input type="file" id="propertyCardFile" accept="image/*" capture="environment" required>
 
                 <label>Foto del Carro (Frente mostrando la placa)</label>
-                <input type="file" id="carPhotoFile" accept="image/*" required>
+                <input type="file" id="carPhotoFile" accept="image/*" capture="environment" required>
 
                 <button type="submit" id="btnSubmit">Registrarse como Conductor</button>
             </form>
