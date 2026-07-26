@@ -40,7 +40,100 @@ body {
     z-index: 1; 
 }
 
-/* PANEL DESLIZABLE INFERIOR (BOTTOM SHEET) CON EFECTO 3D Y PERSPECTIVA */
+/* ==========================================
+   MENÚ DESLIZANTE LATERAL Y BOTONES FLOTANTES
+   ========================================== */
+
+/* Contenedor de controles superiores en el mapa */
+.map-top-controls {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    display: flex;
+    justify-content: space-between;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Botones circulares flotantes */
+.map-btn {
+    pointer-events: auto;
+    background: linear-gradient(135deg, rgba(35, 30, 56, 0.95), rgba(22, 20, 35, 0.95));
+    border: 1px solid rgba(167, 139, 250, 0.4);
+    color: #f3e5ab;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 15px rgba(139, 92, 246, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.map-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8), 0 0 20px rgba(167, 139, 250, 0.4);
+}
+
+/* Panel Deslizante Lateral (Side Drawer) */
+.side-drawer {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 80%;
+    max-width: 320px;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(22, 20, 35, 0.98), rgba(13, 11, 22, 0.98));
+    backdrop-filter: blur(16px);
+    border-right: 1px solid rgba(167, 139, 250, 0.4);
+    z-index: 4000;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-shadow: 15px 0 35px rgba(0, 0, 0, 0.8);
+    transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.side-drawer.open {
+    left: 0;
+}
+
+.drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+    padding-bottom: 12px;
+}
+
+.drawer-header h3 {
+    color: #c4b5fd;
+    font-size: 18px;
+}
+
+.close-drawer {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.drawer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+}
+
+/* ==========================================
+   PANEL DESLIZABLE INFERIOR (BOTTOM SHEET)
+   ========================================== */
 .map-overlay { 
     position: absolute; 
     bottom: 60px; 
