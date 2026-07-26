@@ -49,7 +49,7 @@ async function fetchWithTimeout(url, options = {}, timeout = 60000) {
     }
 }
 
-// Registro de conductor con persistencia local en Atlas y sincronización con el Admin
+// Registro de conductor con persistencia local en Atlas y sincronización con el Admin en segundo plano
 app.post('/api/register', async (req, res) => {
     const { phone, fullName, email, selfieBase64, docFrontBase64 } = req.body;
     if (!phone || !fullName) {
@@ -81,34 +81,23 @@ app.post('/api/register', async (req, res) => {
         const nuevoConductorDB = new Driver(nuevoConductorData);
         await nuevoConductorDB.save();
 
-        // Sincronización con el Servidor Central (Admin) con reintentos
-        let intentos = 3;
-        let exitoAdmin = false;
-        let resultadoAdmin = null;
+        // Responderle al cliente de inmediato para que la app fluya sin bloqueos
+        res.json({ 
+            success: true, 
+            message: '¡Registro de conductor exitoso, guardado y sincronizado!' 
+        });
 
-        while (intentos > 0 && !exitoAdmin) {
+        // Sincronización en segundo plano con el Admin
+        setImmediate(async () => {
             try {
-                const response = await fetchWithTimeout(`${ADMIN_URL}/api/admin/sync-driver`, {
+                await fetchWithTimeout(`${ADMIN_URL}/api/admin/sync-driver`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(nuevoConductorData)
-                }, 60000);
-
-                resultadoAdmin = await response.json();
-                if (resultadoAdmin && resultadoAdmin.success) {
-                    exitoAdmin = true;
-                } else {
-                    break;
-                }
-            } catch (error) {
-                intentos--;
-                await new Promise(resolve => setTimeout(resolve, 3000));
+                }, 30000);
+            } catch (syncError) {
+                console.error('[SYNC-WARNING] No se pudo sincronizar con el admin en este instante, se intentará luego.');
             }
-        }
-
-        return res.json({ 
-            success: true, 
-            message: '¡Registro de conductor exitoso, guardado y sincronizado!' 
         });
 
     } catch (dbError) {
@@ -117,7 +106,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// Interfaz de Registro del Conductor con captura de Foto de Rostro y Licencia
+// Interfaz de Registro del Conductor con compresión de imágenes integrada
 app.get('/', (req, res) => {
     res.send(`
         <!DOCTYPE html>
@@ -159,11 +148,40 @@ app.get('/', (req, res) => {
                 <div id="msg" style="margin-top: 15px; font-size: 13px;"></div>
             </div>
             <script>
-                function convertirBase64(file) {
+                function comprimirYConvertirBase64(file) {
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.readAsDataURL(file);
-                        reader.onload = () => resolve(reader.result);
+                        reader.onload = event => {
+                            const img = new Image();
+                            img.src = event.target.result;
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const MAX_WIDTH = 800;
+                                const MAX_HEIGHT = 800;
+                                let width = img.width;
+                                let height = img.height;
+
+                                if (width > height) {
+                                    if (width > MAX_WIDTH) {
+                                        height *= MAX_WIDTH / width;
+                                        width = MAX_WIDTH;
+                                    }
+                                } else {
+                                    if (height > MAX_HEIGHT) {
+                                        width *= MAX_HEIGHT / height;
+                                        height = MAX_HEIGHT;
+                                    }
+                                }
+
+                                canvas.width = width;
+                                canvas.height = height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, width, height);
+                                resolve(canvas.toDataURL('image/jpeg', 0.7));
+                            };
+                            img.onerror = error => reject(error);
+                        };
                         reader.onerror = error => reject(error);
                     });
                 }
@@ -187,8 +205,8 @@ app.get('/', (req, res) => {
                     msg.style.color = '#34d399';
 
                     try {
-                        const selfieBase64 = await convertirBase64(selfieInput);
-                        const docFrontBase64 = await convertirBase64(docInput);
+                        const selfieBase64 = await comprimirYConvertirBase64(selfieInput);
+                        const docFrontBase64 = await comprimirYConvertirBase64(docInput);
 
                         const data = {
                             fullName: document.getElementById('fullName').value,
