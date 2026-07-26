@@ -31,15 +31,32 @@
         </div>
     </div>
 
+    <!-- MENÚ LATERAL DESLIZANTE -->
+    <div id="sideDrawer" class="side-drawer">
+        <div class="drawer-header">
+            <h3>Opciones de Mapa</h3>
+            <button class="close-drawer" onclick="toggleSideMenu()">✕</button>
+        </div>
+        <div class="drawer-content">
+            <div class="menu-item">Filtros de búsqueda</div>
+            <div class="menu-item">Zonas de alta demanda</div>
+            <div class="menu-item">Centro de Seguridad</div>
+        </div>
+    </div>
+
     <!-- VISTA 1: PEDIDOS (MAPA) -->
     <div id="view-pedidos" class="view-container active">
         <div id="map"></div>
+        <div class="map-top-controls" style="position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none;">
+            <button onclick="toggleSideMenu()" style="pointer-events: auto; background: var(--card-bg); border: 1px solid var(--border-gold); color: var(--gold-light); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); cursor: pointer;">🔍</button>
+            <button onclick="toggleSideMenu()" style="pointer-events: auto; background: var(--card-bg); border: 1px solid var(--border-gold); color: var(--gold-light); width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); cursor: pointer;">🛡️</button>
+        </div>
         <div class="map-overlay" id="mapOverlay">
             <div class="sheet-handle-bar" onclick="toggleBottomSheet()">
                 <div class="sheet-handle"></div>
             </div>
             <div class="card-widget guaranteed-price">
-                <span>desde $5,100</span>
+                <span>desde 5100 $</span>
                 <div style="display:flex; align-items:center; gap:5px; font-size: 14px;">Precio mínimo garantizado <span>›</span></div>
             </div>
             <div class="stats-row">
@@ -65,6 +82,13 @@
                 </div>
                 <span style="font-size: 16px; color: var(--gold-primary);">›</span>
             </div>
+            <div class="card-widget" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size: 13px; font-weight: bold;">00:00 — 23:59</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Bonos en la ciudad</div>
+                </div>
+                <div style="font-weight: bold; color: var(--gold-light);">desde 5100 $</div>
+            </div>
             <div class="action-banner">
                 <div>
                     <b>Pedidos de viaje no disponibles</b><br>
@@ -78,9 +102,11 @@
     <!-- VISTA 2: LISTA -->
     <div id="view-lista" class="view-container content-padded">
         <h1 class="section-title">Lista de solicitudes</h1>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="background: var(--card-bg); border: 1px solid var(--border-gold); height: 90px; border-radius: 12px; display:flex; align-items:center; justify-content:center; color: var(--text-muted);">Buscando solicitudes cercanas...</div>
-            <div style="background: var(--card-bg); border: 1px solid var(--border-gold); height: 90px; border-radius: 12px; display:flex; align-items:center; justify-content:center; color: var(--text-muted);">Sin solicitudes en espera</div>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 70vh; text-align: center; gap: 15px;">
+            <div style="font-size: 70px;">🐱💻</div>
+            <div style="font-size: 18px; font-weight: bold;">No hay pedidos de viaje en este momento</div>
+            <div style="font-size: 13px; color: var(--text-muted);">A aparecerán nuevos viajes, ¡vuelve pronto!</div>
+            <button style="margin-top: 10px; background: var(--card-bg); border: 1px solid var(--border-gold); color: var(--gold-light); padding: 12px 24px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; gap: 8px; cursor: pointer;">🔄 Actualizar</button>
         </div>
     </div>
 
@@ -88,11 +114,21 @@
     <div id="view-dinero" class="view-container content-padded">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h1 class="section-title" style="margin-bottom:0;">Dinero</h1>
-            <div style="background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark)); color: #000; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">🤝 Asistencia Elite</div>
+            <div style="background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark)); color: #000; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">🤝 Servicio de Asistencia</div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="color: var(--text-muted); font-size: 13px;">20 21 22 23 24 25 <span style="color: var(--gold-light); font-weight: bold;">26</span></div>
         </div>
         <div class="money-card">
             <div style="color: var(--text-muted); font-size: 13px;">Hoy</div>
             <div class="money-big">0 $</div>
+        </div>
+        <div class="card-widget" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size: 13px; font-weight: bold;">Consulta las estadísticas de otras personas</div>
+                <div style="font-size: 11px; color: var(--text-muted);">Completa pedidos para conocer tus estadísticas</div>
+            </div>
+            <span style="font-size: 16px; color: var(--gold-primary);">›</span>
         </div>
         <div class="money-card" style="display: flex; justify-content: space-between; align-items: center;">
             <div>
@@ -119,22 +155,45 @@
 
     <!-- VISTA 5: PERFIL -->
     <div id="view-perfil" class="view-container content-padded">
-        <div class="profile-header">
-            <img id="profileAvatarImg" src="" class="profile-avatar" alt="Avatar">
-            <div class="profile-info">
-                <h3 id="profileName" style="color: var(--gold-light); font-size: 18px;">Conductor Librex</h3>
-                <p id="profilePhone" style="color: var(--text-muted); font-size: 13px;">+57 000 0000000</p>
+        <div class="profile-header" style="justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img id="profileAvatarImg" src="" class="profile-avatar" alt="Avatar">
+                <div class="profile-info">
+                    <h3 id="profileName" style="color: var(--gold-light); font-size: 18px;">Delgado Gomez</h3>
+                    <p id="profilePhone" style="color: var(--text-muted); font-size: 13px;">+57 000 0000000</p>
+                </div>
+            </div>
+            <button style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; border: none; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: flex; align-items: center; gap: 4px; cursor: pointer;">👥 Invitar un amigo</button>
+        </div>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <div style="flex: 1; background: var(--card-bg); border: 1px solid var(--border-gold); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 15px; font-weight: bold; color: var(--gold-light);">+41</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Prioridad</div>
+                </div>
+                <div style="font-size: 20px;">⭐</div>
+            </div>
+            <div style="flex: 1; background: var(--card-bg); border: 1px solid var(--border-gold); padding: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 15px; font-weight: bold; color: var(--gold-light);">4.94</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Calificación</div>
+                </div>
+                <div style="font-size: 20px;">⭐</div>
             </div>
         </div>
         <div class="menu-list">
             <div class="menu-item"><span>Socio</span> <span style="color:var(--gold-primary)">Pro Drivers Colombia SAS ›</span></div>
-            <div class="menu-item"><span>Tipos de servicios</span> <span style="color:var(--gold-primary)">2 de 7 ›</span></div>
-            <div class="menu-item"><span>Método de Pago</span> <span style="color:var(--gold-primary)">Efectivo y Tarjeta ›</span></div>
+            <div class="menu-item"><span>Tipos de servicios y opciones</span> <span style="color:var(--gold-primary)">2 de 7 ›</span></div>
+            <div class="menu-item"><span>Pago</span> <span style="color:var(--gold-primary)">Pago en efectivo y con tarjeta ›</span></div>
         </div>
         <h3 style="font-size: 16px; margin: 20px 0 10px 0; color: var(--gold-primary);">Mis vehículos</h3>
         <div class="menu-item" style="display: block;">
-            <div style="font-weight: bold; font-size: 15px;">Hyundai Atos · 1 vehículo</div>
+            <div style="font-weight: bold; font-size: 15px;">Hyundai Atos · 1 vehículo en total</div>
             <div style="background: var(--gold-primary); color: #000; display: inline-block; padding: 4px 10px; border-radius: 4px; font-weight: bold; margin-top: 8px;">VCW348</div>
+        </div>
+        <div class="menu-list" style="margin-top: 15px;">
+            <div class="menu-item"><span>Solución de problemas</span> <span style="color:var(--gold-primary)">1 ›</span></div>
+            <div class="menu-item"><span>Verificación por foto</span> <span style="color:var(--gold-primary)">›</span></div>
         </div>
     </div>
 
@@ -154,7 +213,7 @@
             Dinero
         </button>
         <button class="nav-item" onclick="switchView('chats', this)">
-            <span class="badge-num">165</span>
+            <span class="badge-num">164</span>
             <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
             Chats
         </button>
@@ -196,6 +255,11 @@
             const overlay = document.getElementById('mapOverlay');
             isExpanded = !isExpanded;
             overlay.style.transform = isExpanded ? 'translateY(0)' : 'translateY(calc(100% - 35px))';
+        }
+
+        function toggleSideMenu() {
+            const drawer = document.getElementById('sideDrawer');
+            drawer.classList.toggle('open');
         }
 
         function comprimirYConvertirBase64(file) {
