@@ -1,334 +1,108 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Librex Conductores</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Conexión al archivo de estilos separado -->
-      <link rel="stylesheet" href="style.css">
-</head>
-<body>
+const express = require('express');
+const compression = require('compression');
+const mongoose = require('mongoose');
+const path = require('path');
 
-    <div id="regModal" style="display:none;">
-        <div class="modal-card">
-            <h2>Librex Conductores</h2>
-            <p>Registro y Verificación de Identidad</p>
-            <form id="regForm">
-                <input type="text" id="fullName" placeholder="Nombre Completo" required>
-                <input type="tel" id="phone" placeholder="Número de Teléfono" required>
-                <input type="email" id="email" placeholder="Correo Electrónico" required>
-                
-                <label>Foto de Rostro (Selfie)</label>
-                <input type="file" id="selfieFile" accept="image/*" required>
-                
-                <label>Pase / Licencia de Conducir</label>
-                <input type="file" id="docFile" accept="image/*" required>
+const app = express();
+const PORT = process.env.PORT || 3002;
 
-                <button type="submit" id="btnSubmit">Registrarse como Conductor</button>
-            </form>
-            <div id="msg" style="margin-top: 15px; font-size: 13px;"></div>
-        </div>
-    </div>
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(compression());
 
-    <!-- VISTA 1: PEDIDOS (MAPA) -->
-    <div id="view-pedidos" class="view-container active">
-        <div class="top-alert" id="topAlert" style="display:none;">
-            <span>Verificación</span> Realiza una verificación por selfie
-        </div>
-        <div id="map"></div>
-        
-        <div class="map-overlay" id="mapOverlay">
-            <!-- Al hacer clic en la rayita se abre o se oculta por completo -->
-            <div class="sheet-handle-bar" onclick="toggleBottomSheet()">
-                <div class="sheet-handle"></div>
-            </div>
-            <div class="card-widget guaranteed-price">
-                <span>desde 5100 $</span>
-                <div style="display:flex; align-items:center; gap:5px; font-size: 14px;">Precio mínimo garantizado <span>›</span></div>
-            </div>
-            <div class="stats-row">
-                <div class="stat-box">
-                    <div style="font-size:22px;">⭐</div>
-                    <div>
-                        <div style="font-size: 11px; color: #9ca3af;">Prioridad</div>
-                        <div style="font-size: 15px; font-weight: bold;" id="driverPriority">+41</div>
-                    </div>
-                </div>
-                <div class="stat-box">
-                    <div style="font-size:22px;">💳</div>
-                    <div>
-                        <div style="font-size: 11px; color: #9ca3af;">0 pedidos</div>
-                        <div style="font-size: 15px; font-weight: bold;">0 $</div>
-                    </div>
-                </div>
-            </div>
-            <div class="card-widget" style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <div style="font-size: 13px; font-weight: bold;">En este momento no hay objetivos activos</div>
-                    <div style="font-size: 11px; color: #9ca3af;">Conoce cómo obtener un objetivo nuevo</div>
-                </div>
-                <span style="font-size: 16px;">›</span>
-            </div>
-            <div class="card-widget" style="display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <div style="font-size: 11px; color: #9ca3af;">00:00 — 23:59 · Bonos en la ciudad</div>
-                </div>
-                <div style="font-weight: bold; font-size: 14px;">desde 5100 $</div>
-            </div>
-            <div class="action-banner">
-                <div>
-                    <b>Pedidos de viaje no disponibles</b>
-                    Resuelve los conflictos con la solución de problemas
-                </div>
-                <span style="font-size: 18px;">➔</span>
-            </div>
-        </div>
-    </div>
+// Permite servir archivos estáticos (HTML, CSS, JS) en la misma ruta
+app.use(express.static(__dirname));
 
-    <!-- VISTA 2: LISTA DE SOLICITUDES -->
-    <div id="view-lista" class="view-container content-padded">
-        <h1 class="section-title">Lista de solicitudes</h1>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="background: rgba(22, 20, 35, 0.9); border: 1px solid rgba(139, 92, 246, 0.2); height: 90px; border-radius: 12px; display:flex; align-items:center; justify-content:center; color: #9ca3af;">Buscando solicitudes cercanas...</div>
-            <div style="background: rgba(22, 20, 35, 0.9); border: 1px solid rgba(139, 92, 246, 0.2); height: 90px; border-radius: 12px; display:flex; align-items:center; justify-content:center; color: #9ca3af;">Sin solicitudes en espera</div>
-        </div>
-    </div>
+// URL de tu servidor administrador central en Render
+const ADMIN_URL = process.env.ADMIN_URL || 'https://librex-980i.onrender.com';
 
-    <!-- VISTA 3: DINERO -->
-    <div id="view-dinero" class="view-container content-padded">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h1 class="section-title" style="margin-bottom:0;">Dinero</h1>
-            <div style="background: #10b981; color: #fff; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 5px;">🤝 Servicio de Asistencia</div>
-        </div>
-        <div class="money-card">
-            <div style="color: #9ca3af; font-size: 13px;">Hoy</div>
-            <div class="money-big">0 $</div>
-        </div>
-        <div class="money-card" style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <div style="font-size: 14px; font-weight: bold;">Límitar del saldo</div>
-                <div style="color: #9ca3af; font-size: 12px;">Todo parece en orden</div>
-            </div>
-            <div style="font-size: 16px; font-weight: bold;">-50.000 $</div>
-        </div>
-        <div class="money-card">
-            <div style="color: #9ca3af; font-size: 12px;">Saldo</div>
-            <div style="font-size: 22px; font-weight: bold; margin: 5px 0;">-20.102 $</div>
-            <div style="color: #9ca3af; font-size: 12px; margin-top: 10px;">Empresa asociada</div>
-            <div style="font-weight: bold; font-size: 14px;">Pro Drivers Colombia SAS</div>
-        </div>
-    </div>
+// Cadena de conexión a MongoDB Atlas (Conductor)
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://vitorinoarenas1000_db_user:nATMmayO0SGQEpuD@librex.lglongl.mongodb.net/librex_conductores?retryWrites=true&w=majority&appName=Librex';
 
-    <!-- VISTA 4: CHATS -->
-    <div id="view-chats" class="view-container content-padded">
-        <h1 class="section-title">Chats</h1>
-        <div style="background: rgba(22, 20, 35, 0.9); border: 1px solid rgba(139, 92, 246, 0.2); padding: 20px; border-radius: 12px; text-align: center; color: #9ca3af;">
-            No tienes conversaciones activas con soporte o pasajeros.
-        </div>
-    </div>
+mongoose.connect(MONGO_URI)
+    .then(() => console.log('[DB-DRIVER] Conectado exitosamente a MongoDB Atlas'))
+    .catch(err => console.error('[DB-DRIVER] Error de conexión a MongoDB:', err));
 
-    <!-- VISTA 5: PERFIL -->
-    <div id="view-perfil" class="view-container content-padded">
-        <div class="profile-header">
-            <img id="profileAvatarImg" src="" class="profile-avatar" alt="Avatar">
-            <div class="profile-info">
-                <h3 id="profileName">Conductor Librex</h3>
-                <p id="profilePhone">+57 000 0000000</p>
-            </div>
-        </div>
-        <div class="menu-list">
-            <div class="menu-item"><span>Socio</span> <span>Pro Drivers Colombia SAS ›</span></div>
-            <div class="menu-item"><span>Tipos de servicios y opciones</span> <span>2 de 7 ›</span></div>
-            <div class="menu-item"><span>Pago</span> <span>Pago en efectivo y con tarjeta ›</span></div>
-        </div>
-        <h3 style="font-size: 16px; margin: 20px 0 10px 0;">Mis vehículos</h3>
-        <div class="menu-item" style="display: block;">
-            <div style="font-weight: bold; font-size: 15px;">Hyundai Atos · 1 vehículo en total</div>
-            <div style="background: #fff; color: #000; display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-top: 8px;" id="profileVehiclePlate">VCW348</div>
-        </div>
-    </div>
+const driverSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    phone: { type: String, required: true, trim: true },
+    fullName: { type: String, required: true, trim: true },
+    email: { type: String, default: 'Sin correo', trim: true },
+    selfieBase64: { type: String, default: '' },
+    docFrontBase64: { type: String, default: '' },
+    status: { type: String, default: 'Disponible' },
+    createdAt: { type: String, default: () => new Date().toISOString() },
+    lastActivity: { type: String, default: () => new Date().toISOString() }
+});
 
-    <!-- BARRA DE NAVEGACIÓN INFERIOR -->
-    <nav class="bottom-nav">
-        <button class="nav-item active" onclick="switchView('pedidos', this)">
-            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            Pedidos
-        </button>
-        <button class="nav-item" onclick="switchView('lista', this)">
-            <div class="badge-dot"></div>
-            <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-            Lista
-        </button>
-        <button class="nav-item" onclick="switchView('dinero', this)">
-            <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-            Dinero
-        </button>
-        <button class="nav-item" onclick="switchView('chats', this)">
-            <span class="badge-num">165</span>
-            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
-            Chats
-        </button>
-        <button class="nav-item" onclick="switchView('perfil', this)">
-            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            Perfil
-        </button>
-    </nav>
+const Driver = mongoose.model('Driver', driverSchema);
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        let map = L.map('map', { zoomControl: false }).setView([3.4516, -76.5320], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+async function fetchWithTimeout(url, options = {}, timeout = 60000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        throw error;
+    }
+}
 
-        let marker = L.marker([3.4516, -76.5320]).addTo(map)
-            .bindPopup('Tu ubicación actual')
-            .openPopup();
+app.post('/api/register', async (req, res) => {
+    const { phone, fullName, email, selfieBase64, docFrontBase64 } = req.body;
+    if (!phone || !fullName) {
+        return res.status(400).json({ success: false, message: 'Datos incompletos.' });
+    }
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                map.setView([lat, lng], 16);
-                marker.setLatLng([lat, lng]);
-            });
-        }
+    const phoneTrim = phone.trim();
 
-        function switchView(viewName, btnElement) {
-            document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
-            document.getElementById('view-' + viewName).classList.add('active');
+    try {
+        await Driver.deleteMany({ phone: phoneTrim });
 
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            btnElement.classList.add('active');
+        const nuevoConductorData = {
+            id: Date.now().toString(),
+            phone: phoneTrim,
+            fullName: fullName.trim(),
+            email: email ? email.trim() : 'Sin correo',
+            selfieBase64: selfieBase64 || '',
+            docFrontBase64: docFrontBase64 || '',
+            status: 'Disponible',
+            createdAt: new Date().toISOString(),
+            lastActivity: new Date().toISOString()
+        };
 
-            if(viewName === 'pedidos') {
-                setTimeout(() => { map.invalidateSize(); }, 200);
-            }
-        }
+        const nuevoConductorDB = new Driver(nuevoConductorData);
+        await nuevoConductorDB.save();
 
-        // Lógica mejorada para ocultar o expandir por completo el panel inferior desde la rayita
-        let isExpanded = true;
-        function toggleBottomSheet() {
-            const overlay = document.getElementById('mapOverlay');
-            isExpanded = !isExpanded;
-            if (isExpanded) {
-                overlay.style.transform = 'translateY(0)';
-                overlay.style.maxHeight = '75vh';
-            } else {
-                // Al cerrarlo, baja y deja visible únicamente la barra/rayita
-                overlay.style.transform = 'translateY(calc(100% - 35px))';
-            }
-        }
+        res.json({ 
+            success: true, 
+            message: '¡Registro de conductor exitoso, guardado y sincronizado!',
+            driver: nuevoConductorData
+        });
 
-        function comprimirYConvertirBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = event => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
-                        const MAX_HEIGHT = 800;
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-                        } else {
-                            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
-                    };
-                    img.onerror = error => reject(error);
-                };
-                reader.onerror = error => reject(error);
-            });
-        }
-
-        function checkDriverSession() {
-            const savedDriver = localStorage.getItem('librex_driver');
-            if (!savedDriver) {
-                document.getElementById('regModal').style.display = 'flex';
-            } else {
-                const driver = JSON.parse(savedDriver);
-                updateDriverUI(driver);
-            }
-        }
-
-        function updateDriverUI(driver) {
-            document.getElementById('profileName').innerText = driver.fullName;
-            document.getElementById('profilePhone').innerText = driver.phone;
-            if (driver.selfieBase64) {
-                document.getElementById('profileAvatarImg').src = driver.selfieBase64;
-            }
-        }
-
-        document.getElementById('regForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btnSubmit');
-            const msg = document.getElementById('msg');
-
-            const selfieInput = document.getElementById('selfieFile').files[0];
-            const docInput = document.getElementById('docFile').files[0];
-
-            if (!selfieInput || !docInput) {
-                alert('Debes adjuntar tu foto de rostro y tu pase de conducir.');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = 'Procesando imágenes...';
-            msg.innerText = 'Subiendo datos y validando unicidad...';
-            msg.style.color = '#c4b5fd';
-
+        // Sincronización asíncrona hacia el panel de administración central
+        setImmediate(async () => {
             try {
-                const selfieBase64 = await comprimirYConvertirBase64(selfieInput);
-                const docFrontBase64 = await comprimirYConvertirBase64(docInput);
-
-                const data = {
-                    fullName: document.getElementById('fullName').value,
-                    phone: document.getElementById('phone').value,
-                    email: document.getElementById('email').value,
-                    selfieBase64,
-                    docFrontBase64
-                };
-
-                const res = await fetch('/api/register', {
+                await fetchWithTimeout(`${ADMIN_URL}/api/admin/sync-driver`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                const result = await res.json();
-                
-                if (result.success) {
-                    localStorage.setItem('librex_driver', JSON.stringify(result.driver));
-                    updateDriverUI(result.driver);
-                    document.getElementById('regModal').style.display = 'none';
-                } else {
-                    msg.innerText = result.message;
-                    msg.style.color = '#f87171';
-                }
-            } catch (err) {
-                msg.innerText = 'Error de red o imágenes demasiado pesadas.';
-                msg.style.color = '#f87171';
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'Registrarse como Conductor';
+                    body: JSON.stringify(nuevoConductorData)
+                }, 30000);
+            } catch (syncError) {
+                console.error('[SYNC-WARNING] No se pudo sincronizar con el admin en este instante, se reintentará luego.');
             }
         });
 
-        window.onload = () => {
-            checkDriverSession();
-        };
-    </script>
-</body>
-</html>
+    } catch (dbError) {
+        console.error('[DB-ERROR]', dbError);
+        return res.status(500).json({ success: false, message: 'Error interno al procesar el registro en la base de datos.' });
+    }
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.listen(PORT, () => console.log(`[DRIVER-SERVER] Servidor de Conductores activo en puerto ${PORT}`));
