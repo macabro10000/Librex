@@ -10,13 +10,9 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 
-// Servir archivos estáticos correctamente desde la misma carpeta raíz
 app.use(express.static(__dirname));
 
-// URL de tu servidor administrador central en Render
 const ADMIN_URL = process.env.ADMIN_URL || 'https://librex-980i.onrender.com';
-
-// Cadena de conexión a MongoDB Atlas (Conductor)
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://vitorinoarenas1000_db_user:nATMmayO0SGQEpuD@librex.lglongl.mongodb.net/librex_conductores?retryWrites=true&w=majority&appName=Librex';
 
 mongoose.connect(MONGO_URI)
@@ -62,7 +58,7 @@ app.post('/api/register', async (req, res) => {
         await Driver.deleteMany({ phone: phoneTrim });
 
         const nuevoConductorData = {
-            id: Date.now().toString(),
+            id: 'drv_' + Date.now(),
             phone: phoneTrim,
             fullName: fullName.trim(),
             email: email ? email.trim() : 'Sin correo',
@@ -76,23 +72,28 @@ app.post('/api/register', async (req, res) => {
         const nuevoConductorDB = new Driver(nuevoConductorData);
         await nuevoConductorDB.save();
 
-        res.json({ 
+        // Sincronización inmediata hacia el panel de administración central
+        try {
+            await fetchWithTimeout(`${ADMIN_URL}/api/admin/sync-driver`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: nuevoConductorData.id,
+                    fullName: nuevoConductorData.fullName,
+                    phone: nuevoConductorData.phone,
+                    email: nuevoConductorData.email,
+                    selfieBase64: nuevoConductorData.selfieBase64,
+                    docFrontBase64: nuevoConductorData.docFrontBase64
+                })
+            }, 30000);
+        } catch (syncError) {
+            console.error('[SYNC-WARNING] No se pudo sincronizar inmediatamente con el admin:', syncError.message);
+        }
+
+        return res.json({ 
             success: true, 
             message: '¡Registro de conductor exitoso, guardado y sincronizado!',
             driver: nuevoConductorData
-        });
-
-        // Sincronización asíncrona hacia el panel de administración central
-        setImmediate(async () => {
-            try {
-                await fetchWithTimeout(`${ADMIN_URL}/api/admin/sync-driver`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(nuevoConductorData)
-                }, 30000);
-            } catch (syncError) {
-                console.error('[SYNC-WARNING] No se pudo sincronizar con el admin en este instante, se reintentará luego.');
-            }
         });
 
     } catch (dbError) {
