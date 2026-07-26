@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Librex - Panel Maestro Admin</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Librex &bull; Panel Maestro (MongoDB Atlas)</h1>
+            <a href="/logout" class="btn-logout">Cerrar Sesión</a>
+        </header>
+
+        <!-- CONDUCTORES -->
+        <div class="section">
+            <h2>Conductores Registrados ({{driverCount}})</h2>
+            <table>
+                <tr>
+                    <th>Conductor</th>
+                    <th>Teléfono / Correo</th>
+                    <th>Documentos / Fotos</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+                {{driverRows}}
+            </table>
+        </div>
+
+        <!-- PASAJEROS -->
+        <div class="section">
+            <h2>Pasajeros Registrados ({{clientCount}})</h2>
+            <table>
+                <tr>
+                    <th>Pasajero</th>
+                    <th>Teléfono / Correo</th>
+                    <th>Documentos (Cédula)</th>
+                    <th>Saldo / Billetera</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+                {{clientRows}}
+            </table>
+        </div>
+    </div>
+
+    <script>
+        setTimeout(() => window.location.reload(), 15000);
+
+        async function darSaldo(id, tipo) {
+            const monto = prompt("Monto a acreditar:");
+            if (!monto || isNaN(monto)) return;
+            const res = await fetch('/api/admin/add-balance', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, tipo, amount: parseFloat(monto) })
+            });
+            alert((await res.json()).message);
+            window.location.reload();
+        }
+
+        async function cambiarEstado(id, tipo, nuevoEstado) {
+            if (!confirm(`¿Establecer estado a ${nuevoEstado}?`)) return;
+            const res = await fetch('/api/admin/set-status', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, tipo, status: nuevoEstado })
+            });
+            alert((await res.json()).message);
+            window.location.reload();
+        }
+
+        async function eliminarUsuario(id, tipo) {
+            if (!confirm("¿Seguro que deseas eliminar este usuario?")) return;
+            const res = await fetch('/api/admin/delete-user', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, tipo })
+            });
+            alert((await res.json()).message);
+            window.location.reload();
+        }
+
+        async function editarUsuario(id, tipo, nombre, tel) {
+            const nuevoNombre = prompt("Nombre:", nombre);
+            const nuevoTel = prompt("Teléfono:", tel);
+            if (!nuevoNombre || !nuevoTel) return;
+            const res = await fetch('/api/admin/edit-user', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, tipo, fullName: nuevoNombre, phone: nuevoTel })
+            });
+            alert((await res.json()).message);
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>
