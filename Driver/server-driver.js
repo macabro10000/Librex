@@ -10,8 +10,9 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(compression());
 
-// Servir los archivos estáticos de la interfaz desde la carpeta public
-app.use(express.static(path.join(__dirname, 'public')));
+// -> ESTA ES LA CLAVE: Permite que el servidor entregue archivos sueltos (como style.css) 
+// ubicados exactamente en la misma carpeta raíz donde corre este script.
+app.use(express.static(__dirname));
 
 // URL de tu servidor administrador central en Render
 const ADMIN_URL = 'https://librex-980i.onrender.com';
@@ -102,12 +103,9 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-// Ruta raíz que carga automáticamente el index.html desde public
+// Única ruta raíz limpia que carga automáticamente el index.html desde la misma carpeta raíz
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
-});
-    app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'style.css'));
 });
 
 app.listen(PORT, () => console.log(`[DRIVER-SERVER] Servidor de Conductores activo en puerto ${PORT}`));
