@@ -1,77 +1,127 @@
-const path = require('path');
 const express = require('express');
 const compression = require('compression');
 const helmet = require('helmet');
 const cors = require('cors');
 const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// URL de tu servidor administrador central en Render
+// URL del servidor administrador central
 const ADMIN_URL = process.env.ADMIN_URL || 'https://librex-980i.onrender.com';
 
-// Seguridad básica
+// Seguridad
 app.use(helmet());
 
-// Permitir conexiones entre cliente, conductor y administrador
+// Permitir conexiones
 app.use(cors());
 
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.json({ limit: '50mb' }));
+// Compresión y lectura de datos
 app.use(compression());
+app.use(express.urlencoded({
+    extended: true,
+    limit: '50mb'
+}));
+app.use(express.json({
+    limit: '50mb'
+}));
 
-// Función para generar IDs únicos
+// Generar ID único
 function generarId() {
     return crypto.randomUUID();
 }
 
-// Función fetch con AbortController para manejar tiempos de espera largos (ideal para Render Free Tier)
+// Estado del servidor
+app.get('/api/status', (req, res) => {
+    res.json({
+        success: true,
+        server: 'Librex Cliente',
+        status: 'online',
+        version: '2.0.0',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Función Fetch con Timeout
 async function fetchWithTimeout(url, options = {}, timeout = 60000) {
+
     const controller = new AbortController();
+
     const id = setTimeout(() => controller.abort(), timeout);
 
     try {
+
         const response = await fetch(url, {
             ...options,
             signal: controller.signal
         });
 
         clearTimeout(id);
+
         return response;
 
     } catch (error) {
+
         clearTimeout(id);
-        console.error('[CLIENT-SERVER] Error de conexión:', error.message);
+
+        console.error('[CLIENT-SERVER]', error.message);
+
         throw error;
+
     }
+
 }
 
-// Registro directo que sincroniza con el Admin con reintentos y validación de duplicados
+// Registro de pasajeros
 app.post('/api/register', async (req, res) => {
-    const { phone, fullName, email, selfieBase64, docFrontBase64, docBackBase64 } = req.body;
+
+    const {
+        phone,
+        fullName,
+        email,
+        selfieBase64,
+        docFrontBase64,
+        docBackBase64
+    } = req.body;
 
     if (!phone || !fullName) {
+
         return res.status(400).json({
             success: false,
             message: 'Datos incompletos.'
         });
+
     }
 
     const nuevoCliente = {
+
         id: generarId(),
+
         phone: phone.trim(),
+
         fullName: fullName.trim(),
+
         email: email ? email.trim() : 'Sin correo',
+
         selfieBase64: selfieBase64 || '',
+
         docFrontBase64: docFrontBase64 || '',
+
         docBackBase64: docBackBase64 || '',
+
         status: 'Activo',
+
         createdAt: new Date().toISOString(),
+
         lastActivity: new Date().toISOString()
+
     };
+
     let intentos = 3;
+
     let exito = false;
+
     let resultadoAdmin = null;
 
     while (intentos > 0 && !exito) {
@@ -109,12 +159,16 @@ app.post('/api/register', async (req, res) => {
 
         } catch (error) {
 
-            console.warn(`[CLIENT-SYNC] Error de conexión. Reintentando... (${intentos - 1} intentos restantes)`);
+            console.error('[CLIENT-SYNC]', error.message);
 
             intentos--;
 
             if (intentos > 0) {
+
+                console.log(`[CLIENT-SYNC] Reintentando en 3 segundos... (${intentos} intentos restantes)`);
+
                 await new Promise(resolve => setTimeout(resolve, 3000));
+
             }
 
         }
@@ -125,7 +179,12 @@ app.post('/api/register', async (req, res) => {
 
         return res.json({
             success: true,
-            message: '¡Registro de pasajero exitoso y sincronizado!'
+            message: '¡Registro de pasajero exitoso y sincronizado!',
+            cliente: {
+                id: nuevoCliente.id,
+                nombre: nuevoCliente.fullName,
+                telefono: nuevoCliente.phone
+            }
         });
 
     }
@@ -137,9 +196,7 @@ app.post('/api/register', async (req, res) => {
 
 });
 
-const path = require('path');
-
-// Servir la carpeta pública
+// Servir archivos públicos
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Página principal
@@ -147,7 +204,36 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Página no encontrada
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: 'Ruta no encontrada.'
+    });
+});
+
+// Capturar errores del servidor
+app.use((err, req, res, next) => {
+
+    console.error('[SERVER ERROR]', err);
+
+    res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor.'
+    });
+
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
-    console.log(`[CLIENT-SERVER] Servidor de Clientes activo en puerto ${PORT}`);
+
+    console.log('===================================');
+    console.log('   LIBREX CLIENT SERVER INICIADO');
+    console.log('===================================');
+    console.log(`Puerto: ${PORT}`);
+    console.log(`Admin: ${ADMIN_URL}`);
+    console.log(`Estado: Activo`);
+    console.log('===================================');
+
 });
+         
