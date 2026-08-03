@@ -69,3 +69,84 @@ app.post('/api/register', async (req, res) => {
         createdAt: new Date().toISOString(),
         lastActivity: new Date().toISOString()
     };
+    let intentos = 3;
+    let exito = false;
+    let resultadoAdmin = null;
+
+    while (intentos > 0 && !exito) {
+
+        try {
+
+            console.log(`[CLIENT-SYNC] Conectando con el servidor principal... Intentos restantes: ${intentos}`);
+
+            const response = await fetchWithTimeout(
+                `${ADMIN_URL}/api/admin/sync-client`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(nuevoCliente)
+                },
+                60000
+            );
+
+            resultadoAdmin = await response.json();
+
+            if (response.ok && resultadoAdmin.success) {
+
+                exito = true;
+
+            } else {
+
+                return res.status(response.status || 400).json({
+                    success: false,
+                    message: resultadoAdmin.message || 'No fue posible registrar el pasajero.'
+                });
+
+            }
+
+        } catch (error) {
+
+            console.warn(`[CLIENT-SYNC] Error de conexión. Reintentando... (${intentos - 1} intentos restantes)`);
+
+            intentos--;
+
+            if (intentos > 0) {
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+
+        }
+
+    }
+
+    if (exito) {
+
+        return res.json({
+            success: true,
+            message: '¡Registro de pasajero exitoso y sincronizado!'
+        });
+
+    }
+
+    return res.status(503).json({
+        success: false,
+        message: 'El servidor principal no está disponible. Intenta nuevamente en unos segundos.'
+    });
+
+});
+
+const path = require('path');
+
+// Servir la carpeta pública
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Página principal
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Iniciar servidor
+app.listen(PORT, () => {
+    console.log(`[CLIENT-SERVER] Servidor de Clientes activo en puerto ${PORT}`);
+});
