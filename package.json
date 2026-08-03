@@ -1,24 +1,32 @@
 {
   "name": "librex-multiplatform-system",
-  "version": "1.2.1",
-  "description": "Sistema multiplataforma avanzado de movilidad, transporte y panel maestro Librex con MongoDB Atlas",
+  "version": "2.0.0",
+  "description": "Sistema profesional de movilidad Librex",
   "main": "server-main.js",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
     "start": "node server-main.js",
-    "start-client": "node server-client.js",
-    "start-driver": "node server-driver.js",
-    "start-admin": "node server-admin.js"
+    "client": "node server-client.js",
+    "driver": "node server-driver.js",
+    "admin": "node server-admin.js",
+    "dev": "node server-main.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "cookie-parser": "^1.4.6",
+    "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
-    "nodemailer": "^6.9.13",
-    "mongodb": "^6.5.0",
-    "mongoose": "^8.3.1",
-    "bcryptjs": "^2.4.3"
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.18.0",
+    "mongoose": "^8.18.0",
+    "morgan": "^1.10.0",
+    "nodemailer": "^7.0.5",
+    "socket.io": "^4.8.1",
+    "uuid": "^11.1.0"
   }
 }
